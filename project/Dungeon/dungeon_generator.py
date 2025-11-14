@@ -17,7 +17,7 @@ class DungeonGenerator:
         #TODO optimize with queue implementation
         for i in range(25) :
             if Room().is_start == True :
-                self.rooms[1].equals(Room())
+                self.rooms[0].equals(Room())
             else :
                 self.rooms.append(Room())
 
