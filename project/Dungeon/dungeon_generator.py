@@ -14,7 +14,7 @@ class DungeonGenerator:
         self._place_entities()
 
     def _generate_rooms(self) :
-        #TODO optimize with queue implementation
+        #TODO optimize with tree implementation
         for i in range(25) :
             if Room().is_start == True :
                 self.rooms[0].equals(Room())
