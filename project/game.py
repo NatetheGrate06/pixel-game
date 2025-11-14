@@ -21,6 +21,6 @@ class game:
         self.player.update(dt)
         self.dungeon.update(dt)
 
-    def main() :
+    def main(self) :
         self.screen = pygame.display.set_mode((800, 600))
         

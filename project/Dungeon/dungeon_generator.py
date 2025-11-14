@@ -1,4 +1,4 @@
-from .room import Room
+from Dungeon.room import Room
 import random
 
 class DungeonGenerator:
