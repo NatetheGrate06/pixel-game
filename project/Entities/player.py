@@ -6,7 +6,6 @@ class Player:
         self.weapons = []
         self.upgrades = []
         self.consumables = []
-        self.position = (0,0)
         self.current_room = None
 
     def spawn_at(self, room) :
@@ -18,6 +17,7 @@ class Player:
         self.handle_combat(dt)
 
     def handle_movement(self, dt) :
+
         pass #TODO WASD movement + speed (possible dash mechanic)
 
     def handle_combat(self, dt) :
@@ -27,3 +27,7 @@ class Player:
         #TODO keep track of upgrades in queue
         self.upgrades.append(upgrade)
         upgrade.apply(self)
+
+    def consume(self, consumeable) :
+        self.consumables.append(consumeable)
+        consumeable.apply(self)
