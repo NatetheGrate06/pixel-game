@@ -11,7 +11,14 @@ class Menu :
 
         self.font = pygame.font.Font(None, 80)
         self.title_text = self.font.render("BIOs4096", True, (255, 255, 255))
-        self.title_pos = (screen.get_width() // 2 - selft.title_text.get_width() // 2, 100)
+        self.title_pos = (screen.get_width() // 2 - self.title_text.get_width() // 2, 100)
+
+        self.background = pygame.image.load("Assets/Images/menu_background.png")
+
+        self.background = pygame.transform.scale(
+            self.background,
+            (screen.get_width(), screen.get_height())
+        )
 
         self.buttons = [
             MenuButton("Start Game", (screen.get_width() // 2, 300)),
@@ -41,7 +48,7 @@ class Menu :
                 exit()
 
         def draw(self) :
-            self.screen.fill((15, 15, 20))
+            self.screen.blit(self.background, (0,0))
 
             self.screen.blit(self.title_text, self.title_pos)
 
