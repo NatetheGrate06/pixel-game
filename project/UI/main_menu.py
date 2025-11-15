@@ -1,0 +1,51 @@
+from UI.ui_manager import UIManager
+from UI.menu_button import MenuButton
+
+import pygame
+
+class Menu :
+
+    def __init__(self, dt, screen, state_manager) :
+        self.screen = screen
+        self.state_manager = state_manager
+
+        self.font = pygame.font.Font(None, 80)
+        self.title_text = self.font.render("BIOs4096", True, (255, 255, 255))
+        self.title_pos = (screen.get_width() // 2 - selft.title_text.get_width() // 2, 100)
+
+        self.buttons = [
+            MenuButton("Start Game", (screen.get_width() // 2, 300)),
+            MenuButton("Settings", (screen.get_width() // 2, 380)),
+            MenuButton("Credits", (screen.get_width() // 2, 460)),
+            MenuButton("Quit", (screen.get_width() // 2, 540)),
+        ]
+
+    def update(self, events) :
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for button in self.buttons:
+                    if button.is_hovered() :
+                        self.button_action(button.text)
+
+    def button_action(self, text) :
+
+        match text :
+            case "Start Game" :
+                self.state_manager.change_state("GAME")
+            case "Settings" :
+                self.state_manager.change_state("SETTINGS")
+            case "Credits" :
+                self.state_manager.change_state("CREDITS")
+            case "Quit" :
+                pygame.quit()
+                exit()
+
+        def draw(self) :
+            self.screen.fill((15, 15, 20))
+
+            self.screen.blit(self.title_text, self.title_pos)
+
+            for button in self.buttons:
+                button.draw(self.screen)
+
+        

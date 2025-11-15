@@ -46,6 +46,7 @@ class HealthBar :
         pygame.draw.rect(surface, RED), (self.position[0], self.position[1], self.width * hp_ratio, self.height)
 
 class AmmoCounter :
+
     def __init__(self, player) :
         self.player = player
         self.font = pygame.font.Font(None, 32)
@@ -57,6 +58,7 @@ class AmmoCounter :
         surface.blit(img, self.position)
 
 class BossHealthBar :
+
     def __init__(self, boss) :
         self.boss = boss
         self.width = 400
@@ -82,6 +84,7 @@ class BossHealthBar :
         surface.blit(name_text, (self.position[0], self.position[1] - 20))
 
 class FloatingText:
+
     def __init__(self, text, position, color=(255, 255, 255)) :
         self.text = text
         self.position = pygame.Vector2(position)
@@ -99,6 +102,7 @@ class FloatingText:
             surface.blit(img, self.pos)
 
 class FloatingTextManager:
+    #TODO will implement priority queue for text
     def __init__(self):
         self.texts = []
 
@@ -114,3 +118,49 @@ class FloatingTextManager:
     def draw(self, surface):
         for t in self.texts:
             t.draw(surface)
+
+from Items.upgrade import Upgrade
+
+class Upgrade :
+
+    def __init__(self, player) :
+        self.player = player
+        self.width = 180
+        self.height = 60
+        self.position = pygame.Vector2(20, 100)
+        self.font = pygame.font.Font(None, 28)
+
+    def draw(self, surface) :
+        for i in range(len(Upgrade.upgrades)) :
+            pygame.draw.rect(surface, (255, 255, 255), (self.position[0] * i + 40, self.position[1], self.width / len(Upgrade.upgrades), self.height))
+
+            upgrade_name = Upgrade.upgrades[i].get_upgrade()
+            img = self.font.render(upgrade_name, True, (255, 255, 255))
+            surface.blit(img, (self.postion[0] + (60 * i), self.position[1]))
+
+    def update(self, dt) :
+        #TODO animations
+        pass
+
+from Items.consumable import Consumable
+
+class Consumables :
+    #TODO regular queue implementation for consumables
+    def __init__(self, player) :
+        self.player = player
+        self.width = 180
+        self.height = 60
+        self.position = pygame.Vector2(100, 100)
+        self.font = pygame.font.Font(None, 28)
+
+    def draw(self, surface) :
+        for i in range(len(Consumable.consumables)) :
+            pygame.draw.rect(surface, (255, 255, 255), (self.position[0] * i + 40, self.position[1], self.width / len(Consumable.consumables), self.height))
+
+            consumable_name = Consumable.consumables[i].get_consumables()
+            img = self.font.render(consumable_name, True, (255, 255, 255))
+            surface.blit(img, (self.postion[0] + (60 * i), self.position[1]))
+
+    def update(self, dt) :
+        #TODO animations
+        pass 
