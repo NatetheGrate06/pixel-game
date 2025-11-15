@@ -34,4 +34,12 @@ class DungeonGenerator:
     def update(self, dt) :
         for room in self.rooms:
             room.update(dt)
+
+    def get_random_room(self, exclude=None) :
+        choices = [room for room in self.rooms if room is not exclude]
+
+        if not choices: 
+            return None
+        
+        return random.choice(choices)
     

@@ -82,11 +82,8 @@ class Player:
     def handle_combat(self, dt) :
         pass #TODO shooting/melee
 
-    def apply_upgade(self, upgrade) :
-        #TODO keep track of upgrades in queue
-        self.upgrades.append(upgrade)
-        upgrade.apply(self)
-
-    def consume(self, consumeable) :
-        self.consumables.append(consumeable)
-        consumeable.apply(self)
+    #TODO make sure enemies don't immediately attack
+    def teleport_to_room(self, room) :
+        self.current_room = room
+        self.position = room.spawn_point
+        print("Teleported to", room)

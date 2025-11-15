@@ -1,4 +1,6 @@
 from Items.inventory import Inventory
+from Dungeon.dungeon_generator import DungeonGenerator
+
 
 import pygame
 
@@ -23,19 +25,25 @@ class Item :
         self.items.remove(index)
         print(f"Item removed at {index}")
     
-    def apply_effect(self, player) :
+    def apply_effect(self, player, enemy) :
 
-        match effect :
+        match self.effect :
             case "freeze" :
-                pass
+                enemy.frozen = 1.5
             case "flame" :
-                pass
+                enemy.flamed = 3.0
             case "poison" :
-                pass
+                enemy.poison_timer = 5.0
             case "warp" :
-                pass
+                new_room = DungeonGenerator.get_random_room(exclude=player.current_room)
+
+                if new_room :
+                    player.current_room = new_room
+                    player.position = pygame.Vector2(new_room.spawn_x, new_room.spawn_y)
+                    print(f"Warped to room {new_room}")
             case "heal" :
-                pass
+                player.hp = min(player.max_hp, player.hp + self.value)
+                print(f"Healed for {self.value}")
             case "ammo" :
                 if player.weapon:
                     player.weapon.ammo += self.value

@@ -1,31 +1,42 @@
 from UI.ui_manager import UIManager
 from UI.menu_button import MenuButton
+import os
 
 import pygame
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 class Menu :
 
-    def __init__(self, dt, screen, state_manager) :
+    def __init__(self, screen, state_manager) :
         self.screen = screen
         self.state_manager = state_manager
 
         self.font = pygame.font.Font(None, 80)
-        self.title_text = self.font.render("BIOs4096", True, (255, 255, 255))
-        self.title_pos = (screen.get_width() // 2 - self.title_text.get_width() // 2, 100)
 
-        self.background = pygame.image.load("Assets/Images/menu_background.png")
+        base = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base, "..", "Assets", "Images", "menu_background.webp")
+        path = os.path.normpath(path)
 
+        print("Loading background:", path)
+        self.background = pygame.image.load(path).convert_alpha()
+
+        # scale
         self.background = pygame.transform.scale(
             self.background,
             (screen.get_width(), screen.get_height())
         )
-
         self.buttons = [
             MenuButton("Start Game", (screen.get_width() // 2, 300)),
             MenuButton("Settings", (screen.get_width() // 2, 380)),
             MenuButton("Credits", (screen.get_width() // 2, 460)),
             MenuButton("Quit", (screen.get_width() // 2, 540)),
         ]
+
+        self.title_text = self.font.render("BIOS4096", True, (255, 255, 255))
+        self.title_pos = (screen.get_width() // 2 - self.title_text.get_width() // 2, 100)
+
 
     def update(self, events) :
         for event in events:
@@ -47,12 +58,12 @@ class Menu :
                 pygame.quit()
                 exit()
 
-        def draw(self) :
-            self.screen.blit(self.background, (0,0))
+    def draw(self) :
+        self.screen.blit(self.background, (0,0))
 
-            self.screen.blit(self.title_text, self.title_pos)
+        self.screen.blit(self.title_text, self.title_pos)
 
-            for button in self.buttons:
-                button.draw(self.screen)
+        for button in self.buttons:
+            button.draw(self.screen)
 
         

@@ -119,8 +119,6 @@ class FloatingTextManager:
         for t in self.texts:
             t.draw(surface)
 
-from Items.upgrade import Upgrade
-
 class Upgrade :
 
     def __init__(self, player) :
