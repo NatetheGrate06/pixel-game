@@ -4,6 +4,9 @@ from Dungeon.dungeon_generator import DungeonGenerator
 from Entities.player import Player
 from UI.ui_manager import UIManager
 
+player = Player()
+ui = UIManager(player)
+
 class game:
 
     def __init__(self) :

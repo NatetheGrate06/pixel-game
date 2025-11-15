@@ -1,7 +1,7 @@
-from Entities.weapon import Weapon
 import pygame
 
 class Player:
+    
     def __init__(self) :
         self.hp = 100
         self.weapons = []
@@ -47,6 +47,7 @@ class Player:
 
 
     def handle_movement(self, dt, walls) :
+        self.velocity = self.velocity.lerp(1.0, 0.2)
         self.position.x += self.velocity.x * self.speed * dt
         self.hitbox.topleft = self.position
         #x-axis
