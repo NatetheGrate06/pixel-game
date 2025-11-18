@@ -21,15 +21,18 @@ class DungeonGenerator:
 
     # -------- INTERNAL STEPS --------
     def _generate_rooms(self):
-        """Create rooms scattered in space with positions."""
+        self.rooms = []
+    
         for _ in range(self.num_rooms):
             x = random.randint(0, 1000)
             y = random.randint(0, 800)
+
             room = Room("Normal")
             room.position = (x, y)
             room.neighbors = []
             room.is_start = False
             room.is_boss = False
+
             self.rooms.append(room)
 
     def _connect_rooms(self):

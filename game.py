@@ -16,15 +16,24 @@ class Game:
 
         self.clock = pygame.time.Clock()
         self.running = True
+        pygame.mouse.set_visible(False)
 
+        # State Manager
         self.state_manager = GameStateManager()
 
+        # Game systems
         self.player = Player()
         self.dungeon = DungeonGenerator()
         self.dungeon.generate_new_floor() 
-        self.ui = UIManager(self.player)
-        self.dungeon_map = DungeonVisualizer(self.dungeon)
+        
+        self.current_room = self.dungeon.get_start_room()
 
+        self.ui = UIManager(self.player)
+
+        # Minimap (Visualizer)
+        self.minimap = DungeonVisualizer(self.dungeon)
+
+        # Main menu
         self.menu = Menu(self.screen, self.state_manager)
 
         self.cursor = Cursor()
@@ -34,6 +43,7 @@ class Game:
     # ---------------------------------------------------------
     def main_loop(self):
         while self.running:
+
             dt = self.clock.tick(60) / 1000  # delta time in seconds
             events = pygame.event.get()
 
@@ -46,6 +56,8 @@ class Game:
             if self.state_manager.state == "MAIN_MENU":
                 self.menu.update(events)
                 self.menu.draw()
+                self.cursor.draw(self.screen)
+                self.cursor.update()
 
             elif self.state_manager.state == "GAME":
                 self.update(dt)
@@ -57,7 +69,7 @@ class Game:
     # GAME UPDATE
     # ---------------------------------------------------------
     def update(self, dt):
-        self.player.update(dt)
+        self.player.update(dt, self.current_room.walls)
         self.dungeon.update(dt)
         self.ui.update(dt)
         self.cursor.update()
@@ -67,9 +79,20 @@ class Game:
     # ---------------------------------------------------------
     def draw(self):
         self.screen.fill((15, 15, 20))
-        self.dungeon_map.draw(self.screen)
+
+        # Draw room first (so walls appear behind player)
+        self.current_room.draw(self.screen)
+
+        # Draw player
         self.player.draw(self.screen)
+
+        # Draw dungeon minimap
+        self.minimap.draw(self.screen)
+
+        # Draw UI
         self.ui.draw(self.screen)
+
+        # Draw cursor last (always on top)
         self.cursor.draw(self.screen)
 
     # ---------------------------------------------------------
@@ -77,11 +100,15 @@ class Game:
     # ---------------------------------------------------------
     def start_game(self):
         self.dungeon.generate_new_floor()     # creates rooms
-        self.visualizer = DungeonVisualizer(self.dungeon)   # recreate map after generation
+
+        # recreate minimap after new floor generation
+        self.minimap = DungeonVisualizer(self.dungeon)
         
-        start = self.dungeon.get_start_room()
-        self.player.initialize()
-        self.player.spawn_at(start)
+        # set starting room
+        self.current_room = self.dungeon.get_start_room()
+
+        # initialize player position
+        self.player.spawn_at(self.current_room)
 
         self.state_manager.change_state("GAME")
 

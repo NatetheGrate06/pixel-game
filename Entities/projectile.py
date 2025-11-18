@@ -84,7 +84,7 @@ class Projectile :
 
 class Cursor:
     def __init__(self) :
-        pygame.mouse.set_visible(False)
+        
         self.position = pygame.mouse.get_pos()
         self.color = (255, 255, 255)
         self.radius = 6

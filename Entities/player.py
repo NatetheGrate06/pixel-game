@@ -1,4 +1,5 @@
 import pygame
+from Dungeon.dungeon_generator import DungeonGenerator
 
 class Player:
     
@@ -12,12 +13,12 @@ class Player:
         self.position = pygame.Vector2(100,100)
         self.velocity = pygame.Vector2(0,0)
         self.speed = 200
-        self.size = pygame.Rect(0,0,32,32)
+        self.rect = pygame.Rect(0,0,32,32)
 
         self.hitbox = pygame.Rect(0,0,30,30)
 
     def draw(self, surface) :
-        pygame.draw.rect(surface, (50, 200, 255), self.size)
+        pygame.draw.rect(surface, (50, 200, 255), self.rect)
         #TODO load sprite
         #self.sprite = pygame.image.load("Assets/player.png").convert_alpha()
         #self.sprite = pygame.transform.scale(self.sprite, (32, 32))
@@ -41,14 +42,15 @@ class Player:
         if keys[pygame.K_d]:
             self.velocity.x = 1
 
-            if self.velocity.length() != 0:
-                self.velocity = self.velocity.normalize()
+        if self.velocity.length() != 0:
+            self.velocity = self.velocity.normalize()
 
     def update(self, dt, walls=None) :
         self.handle_input()
 
         self.position += self.velocity * self.speed * dt
-        self.size.topleft = self.position
+        self.rect.topleft = self.position
+        self.hitbox.center = self.rect.center
 
         self.handle_movement(dt, walls)
         self.handle_combat(dt)
@@ -82,8 +84,7 @@ class Player:
              if self.hitbox.colliderect(wall) :
                 #moving up
                 if self.velocity.y > 0:
-                    self.position.y = wall.top - self.hitbox.width
-
+                    self.position.y = wall.top - self.hitbox.height
                 #moving down
                 elif self.velocity.y < 0:
                     self.position.y = wall.bottom
@@ -97,5 +98,5 @@ class Player:
     #TODO make sure enemies don't immediately attack
     def teleport_to_room(self, room) :
         self.current_room = room
-        self.position = room.spawn_point
+        self.position = pygame.Vector2(room.spawn_point)
         print("Teleported to", room)
