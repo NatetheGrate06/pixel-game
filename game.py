@@ -6,6 +6,7 @@ from Entities.player import Player
 from UI.ui_manager import UIManager
 from UI.game_state_manager import GameStateManager
 from UI.main_menu import Menu
+from Entities.projectile import Projectile, Cursor
 
 class Game:
     def __init__(self):
@@ -25,6 +26,8 @@ class Game:
         self.dungeon_map = DungeonVisualizer(self.dungeon)
 
         self.menu = Menu(self.screen, self.state_manager)
+
+        self.cursor = Cursor()
 
     # ---------------------------------------------------------
     # MAIN GAME LOOP
@@ -57,6 +60,7 @@ class Game:
         self.player.update(dt)
         self.dungeon.update(dt)
         self.ui.update(dt)
+        self.cursor.update()
 
     # ---------------------------------------------------------
     # RENDER
@@ -66,6 +70,7 @@ class Game:
         self.dungeon_map.draw(self.screen)
         self.player.draw(self.screen)
         self.ui.draw(self.screen)
+        self.cursor.draw(self.screen)
 
     # ---------------------------------------------------------
     # START GAME

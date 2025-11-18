@@ -81,3 +81,16 @@ class Projectile :
     def draw(self, surface) :
         if self.alive:
             pygame.draw.circle(surface, self.color, (int(self.pos.x), int(self.pos.y)), self.radius)
+
+class Cursor:
+    def __init__(self) :
+        pygame.mouse.set_visible(False)
+        self.position = pygame.mouse.get_pos()
+        self.color = (255, 255, 255)
+        self.radius = 6
+
+    def update(self) :
+        self.position = pygame.mouse.get_pos()
+
+    def draw(self, surface) :
+        pygame.draw.circle(surface, self.color, self.position, self.radius, 2) 
