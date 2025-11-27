@@ -1,6 +1,7 @@
 import pygame
 import random
 
+from Dungeon.room import Room, GenerateRoom
 from Dungeon.dungeon_generator import DungeonGenerator, DungeonVisualizer
 from Entities.player import Player
 from UI.ui_manager import UIManager
@@ -37,6 +38,8 @@ class Game:
         self.menu = Menu(self.screen, self.state_manager)
 
         self.cursor = Cursor()
+
+        self.tiles = GenerateRoom.load_tileset("Assets/Images/mainlevbuild.png")
 
     # ---------------------------------------------------------
     # MAIN GAME LOOP
@@ -81,7 +84,7 @@ class Game:
         self.screen.fill((15, 15, 20))
 
         # Draw room first (so walls appear behind player)
-        self.current_room.draw(self.screen)
+        self.current_room.draw(self.screen, self.tiles)
 
         # Draw player
         self.player.draw(self.screen)

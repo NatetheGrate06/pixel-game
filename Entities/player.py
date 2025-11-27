@@ -17,6 +17,8 @@ class Player:
 
         self.hitbox = pygame.Rect(0,0,30,30)
 
+        self.knockback = pygame.Vector2(0, 0)
+
     def draw(self, surface) :
         pygame.draw.rect(surface, (50, 200, 255), self.rect)
         #TODO load sprite
@@ -52,46 +54,51 @@ class Player:
         self.rect.topleft = self.position
         self.hitbox.center = self.rect.center
 
+        # apply knockback
+        if self.knockback.length_squared() > 0:
+            self.position += self.knockback * dt
+            self.hitbox.topleft = self.position
+        
+            # dampen knockback (friction)
+            self.knockback *= 0.85
+
         self.handle_movement(dt, walls)
         self.handle_combat(dt)
 
 
-    def handle_movement(self, dt, walls=None) :
-        self.velocity = self.velocity.lerp(pygame.Vector2(0, 0), 0.2)
+    def handle_movement(self, dt, walls):
+        # horizontal movement
+        # horizontal movement
         self.position.x += self.velocity.x * self.speed * dt
         self.hitbox.topleft = self.position
 
-        if not walls: 
-            return
-
-        #x-axis
         for wall in walls:
-            if self.hitbox.colliderect(wall) :
-                #moving in left dir
-                if self.velocity.x > 0:
+            if self.hitbox.colliderect(wall):
+                if self.velocity.x > 0:  # moving right into wall
                     self.position.x = wall.left - self.hitbox.width
-
-                #moving in right dir
-                elif self.velocity.x < 0:
+                    self.knockback.x = -300   # ← bounce left
+                elif self.velocity.x < 0:  # moving left into wall
                     self.position.x = wall.right
+                    self.knockback.x = 300    # ← bounce right
 
                 self.hitbox.topleft = self.position
-        #y-axis
+
+        # vertical movement
         self.position.y += self.velocity.y * self.speed * dt
         self.hitbox.topleft = self.position
 
-        for wall in walls :
-             if self.hitbox.colliderect(wall) :
-                #moving up
-                if self.velocity.y > 0:
+        for wall in walls:
+            if self.hitbox.colliderect(wall):
+                if self.velocity.y > 0:  # moving down
                     self.position.y = wall.top - self.hitbox.height
-                #moving down
-                elif self.velocity.y < 0:
+                    self.knockback.y = -300   # bounce upward
+                elif self.velocity.y < 0:  # moving up
                     self.position.y = wall.bottom
+                    self.knockback.y = 300    # bounce downward
 
                 self.hitbox.topleft = self.position
 
-        
+                
     def handle_combat(self, dt) :
         pass #TODO shooting/melee
 
