@@ -108,9 +108,9 @@ class DungeonVisualizer:
     """Simple minimap / debug view of the dungeon graph."""
     def __init__(self, dungeon):
         self.dungeon = dungeon
-        self.scale = 0.4
-        self.offset_x = 200
-        self.offset_y = 150
+        self.scale = 0.2
+        self.offset_x = 50
+        self.offset_y = 100
         self.font = pygame.font.Font(None, 18)
 
     def draw(self, surface):
@@ -144,7 +144,7 @@ class DungeonVisualizer:
             else:
                 color = (180, 180, 180)
 
-            pygame.draw.circle(surface, color, (x, y), 10)
+            pygame.draw.circle(surface, color, (x, y), 7)
 
             # tiny label with first letter of type
             label_char = room.room_type[0] if room.room_type else "N"

@@ -2,8 +2,9 @@ import pygame
 
 class UIManager :
 
-    def __init__(self, player) :
+    def __init__(self, player, game) :
         self.player = player
+        self.game = game
 
         self.health_bar = HealthBar(player) 
         self.ammo_counter = AmmoCounter(player)
@@ -12,6 +13,10 @@ class UIManager :
 
         self.boss_bar = None
         self.floating_texts = FloatingTextManager()
+
+        font_size = self.game.resolution.scale_value(32)
+        self.font = pygame.font.Font(None, font_size)
+
 
     def set_boss(self, boss) :
         self.boss_bar = BossHealthBar(boss)
@@ -41,11 +46,11 @@ class HealthBar :
         self.position = pygame.Vector2(20,20)
 
     def draw(self, surface) :
-        RED = (255, 0, 0)
+        GREEN = (0, 255, 0)
 
         hp_ratio = self.player.hp / MAX_HP
 
-        pygame.draw.rect(surface, RED, (self.position[0], self.position[1], self.width * hp_ratio, self.height))
+        pygame.draw.rect(surface, GREEN, (self.position[0], self.position[1], self.width * hp_ratio, self.height))
 
 class AmmoCounter :
 

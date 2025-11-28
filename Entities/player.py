@@ -3,7 +3,9 @@ from Dungeon.dungeon_generator import DungeonGenerator
 
 class Player:
     
-    def __init__(self) :
+    def __init__(self, game) :
+        self.game = game
+
         self.hp = 100
         self.weapons = []
         self.upgrades = []
@@ -18,6 +20,9 @@ class Player:
         self.hitbox = pygame.Rect(0,0,30,30)
 
         self.knockback = pygame.Vector2(0, 0)
+
+        scaled_size = self.game.resolution.scale_value(32)
+        self.size = pygame.Rect(0, 0, scaled_size, scaled_size)
 
     def draw(self, surface) :
         pygame.draw.rect(surface, (50, 200, 255), self.rect)

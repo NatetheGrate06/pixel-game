@@ -83,11 +83,13 @@ class Projectile :
             pygame.draw.circle(surface, self.color, (int(self.pos.x), int(self.pos.y)), self.radius)
 
 class Cursor:
-    def __init__(self) :
-        
+    def __init__(self, game) :
         self.position = pygame.mouse.get_pos()
         self.color = (255, 255, 255)
         self.radius = 6
+        self.game = game
+
+        cursor_size = self.game.resolution.scale_value(16)
 
     def update(self) :
         self.position = pygame.mouse.get_pos()

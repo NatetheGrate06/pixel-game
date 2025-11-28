@@ -8,11 +8,16 @@ from UI.ui_manager import UIManager
 from UI.game_state_manager import GameStateManager
 from UI.main_menu import Menu
 from Entities.projectile import Projectile, Cursor
+from UI.Settings.resolution_manager import ResolutionManager
 
 class Game:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((1600, 900))
+
+        self.resolution = ResolutionManager()
+        self.screen = pygame.display.set_mode((800, 450), pygame.RESIZABLE)
+        self.resolution.apply_resolution(800, 450)
+
         pygame.display.set_caption("BIOS4096")
 
         self.clock = pygame.time.Clock()
@@ -23,13 +28,13 @@ class Game:
         self.state_manager = GameStateManager()
 
         # Game systems
-        self.player = Player()
+        self.player = Player(self)
         self.dungeon = DungeonGenerator()
         self.dungeon.generate_new_floor() 
         
         self.current_room = self.dungeon.get_start_room()
 
-        self.ui = UIManager(self.player)
+        self.ui = UIManager(self.player, self)
 
         # Minimap (Visualizer)
         self.minimap = DungeonVisualizer(self.dungeon)
@@ -37,7 +42,7 @@ class Game:
         # Main menu
         self.menu = Menu(self.screen, self.state_manager)
 
-        self.cursor = Cursor()
+        self.cursor = Cursor(self)
 
         self.tiles = GenerateRoom.load_tileset("Assets/Images/mainlevbuild.png")
 
@@ -54,6 +59,12 @@ class Game:
             for event in events:
                 if event.type == pygame.QUIT:
                     self.running = False
+
+                if event.type == pygame.VIDEORESIZE :
+                    self.screen = pygame.display.set_mode(
+                        (event.w, event.h), pygame.RESIZABLE
+                    )
+                    self.resolution.apply_resolution(event.w, event.h)
 
             # Different game states
             if self.state_manager.state == "MAIN_MENU":
@@ -84,7 +95,7 @@ class Game:
         self.screen.fill((15, 15, 20))
 
         # Draw room first (so walls appear behind player)
-        self.current_room.draw(self.screen, self.tiles)
+        self.current_room.draw(self.screen)
 
         # Draw player
         self.player.draw(self.screen)
@@ -122,3 +133,5 @@ class Game:
 if __name__ == "__main__":
     game = Game()
     game.main_loop()
+    print("\nScanning tilesheet...\n")
+    GenerateRoom.detect_floor_tile_block("Assets/Images/mainlevbuild.png")
