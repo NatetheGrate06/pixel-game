@@ -22,11 +22,25 @@ class Room:
         self.tilemap = GenerateRoom.generate_random_room()
 
         self.floor_tiles = GenerateRoom.load_floor_tiles("Assets/Images/floor_tiles.png")
+        self.top_walls = GenerateRoom.load_top_walls("Assets/Images/crypt-wall.png", scale=2)
 
     def update(self, dt):
         for entity in self.entities:
             if hasattr(entity, "update"):
                 entity.update(dt)
+
+    def draw_top_walls(self, surface, room_pixel_width):
+        x = 0
+        i = 0
+        tiles = self.top_walls
+
+        while x < room_pixel_width:
+            wall = tiles[i % len(tiles)]
+            surface.blit(wall, (x, 0))
+            x += wall.get_width()
+            i += 1
+
+    #TODO draw rest of room
 
     def draw(self, surface):
         TILE_SIZE = 16
@@ -42,6 +56,9 @@ class Room:
 
                 tile = self.floor_tiles[tile_index]
                 surface.blit(tile, (x * TILE_SIZE, y * TILE_SIZE))
+        
+        room_pixel_width = len(self.tilemap[0]) * TILE_SIZE
+        self.draw_top_walls(surface, room_pixel_width)
 
         # Debug walls (optional)
         # for wall in self.walls:
@@ -121,3 +138,28 @@ class GenerateRoom:
 
         print(f"Loaded {len(tiles)} floor tiles")
         return tiles
+    
+    @staticmethod
+    def load_top_walls(path, scale=2):
+        img = pygame.image.load(path).convert_alpha()
+        w, h = img.get_width(), img.get_height()
+
+        # Split into two equal pieces
+        section_w = w // 2
+
+        wall_tiles = []
+
+        for i in range(2):
+            part = pygame.Surface((section_w, h), pygame.SRCALPHA)
+            part.blit(img, (0, 0), (i * section_w, 0, section_w, h))
+
+            # Scale walls to match your 32x32 tile scale
+            if scale != 1:
+                part = pygame.transform.scale(
+                    part,
+                    (part.get_width() * scale, part.get_height() * scale)
+                )
+
+            wall_tiles.append(part)
+
+        return wall_tiles

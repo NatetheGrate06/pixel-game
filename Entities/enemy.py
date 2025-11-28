@@ -1,4 +1,5 @@
 import random
+import pygame
 
 locked_on = False
 actions = []
@@ -13,12 +14,32 @@ class Enemy:
         self.hp = hp
         self.speed = speed
         self.room = room
-        self.type = type
-        self.position = (0,0)
+        self.type = enemy_type
 
-    def update(self, dt) :
-        self.move(dt)
-        self.act(dt)
+        self.position = pygame.Vector2(0,0)
+
+        self.state = "idle"
+        self.target = None
+
+        self.action_timer = 0
+        self.action_cooldown = 1.0
+
+        self.aggro_range = 200 #px
+        self.attack_range = 100 #px
+
+    def update(self, dt, player) :
+        self.target = player
+        self.action_timer -= dt
+
+        self.update_state()
+
+        if self.state == "roaming" :
+            self.roam(dt)
+        
+        elif self.state == "chasing" :
+            self.chase(dt, player)
+
+        elif self.state == ""
 
     def move(self, dt) :
         raise NotImplementedError
@@ -27,6 +48,20 @@ class Enemy:
         if (self.locked_on) :
             action = random.choice(self.actions)
             self.perform_action(action)
+
+    def roam(self, dt) :
+        direction = pygame.Vector2(
+            random.uniform(-1, 1),
+            random.uniform(-1, 1)
+        ).normalize()
+
+        self.position += direction * self.speed * dt
+
+    def chase(self, dt, player) :
+        direction = (player.position - self.position).normalize()
+        self.position += direction * self.speed * dt
+    
+
 
     def perform_action(self, action_name) :
         attack_func = ATTACK_FUNCTIONS[action_name]
