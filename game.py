@@ -116,12 +116,11 @@ class Game:
     # GAME UPDATE
     # ---------------------------------------------------------
     def update(self, dt):
+        self.current_room.visited = True
         self.player.update(dt, self.current_room.walls)
         self.dungeon.update(dt)
         self.ui.update(dt)
         self.cursor.update()
-
-        #self.current_room.check_room_transition()
 
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.projectiles)

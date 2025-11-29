@@ -36,6 +36,8 @@ class Room:
         self.doors["W"] = pygame.Rect(0, cy - door_h//2, door_w, door_h)
         self.doors["E"] = pygame.Rect(self.width - door_w, cy - door_h//2, door_w, door_h)
 
+        self.visited = False
+
 
     def update(self, dt):
         pass
@@ -86,7 +88,7 @@ class Room:
         #     pygame.draw.rect(surface, (255, 0, 0), wall, 1)
 
     def generate_walls(self):
-        WT = 20  # wall thickness
+        WT = 120  # wall thickness
 
         self.walls = [
             pygame.Rect(0, 0, 1600, WT),
@@ -101,30 +103,6 @@ class Room:
                 return direction
         return None
 
-    """"
-    def check_room_transition(self):
-        player = self.player
-        rect = player.hitbox
-        room = self.current_room
-
-        for direction, door_rect in room.doors.items():
-            if rect.colliderect(door_rect):
-                next_room = self.dungeon.get_neighbor(room, direction)
-                if not next_room:
-                    return
-
-                print("Transition:", direction, "→", next_room.position)
-
-                self.current_room = next_room
-                self.player.position = pygame.Vector2(
-                    next_room.width // 2, next_room.height // 2
-                )
-                self.player.hitbox.center = self.player.position
-
-                self.enemies.clear()
-                self.spawn_enemies(next_room)
-                return
-     """
     def load_doors(self) :
         self.doors = {}
 

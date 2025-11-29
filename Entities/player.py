@@ -105,7 +105,7 @@ class Player:
 
                 
     def handle_combat(self, dt) :
-        pass #TODO shooting/melee
+        
 
     #TODO make sure enemies don't immediately attack
     def teleport_to_room(self, room) :

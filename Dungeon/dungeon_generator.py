@@ -18,21 +18,41 @@ class DungeonGenerator:
         self._connect_rooms()
         self._assign_special_rooms()
 
+        start_room = self.get_start_room()
+        start_room.visited = True
+
     # -------- INTERNAL STEPS --------
     def _generate_rooms(self):
+        GRID_SPACING = 1
+
+        coords_taken = set()
+        x, y = 0, 0
+        coords_taken.add((x, y))
+
         self.rooms = []
-    
-        for _ in range(self.num_rooms):
-            x = random.randint(0, 1000)
-            y = random.randint(0, 800)
 
-            room = Room("Normal")
-            room.position = (x, y)
-            room.neighbors = []
-            room.is_start = False
-            room.is_boss = False
+        first_room = Room("Normal")
+        first_room.position = (x, y)
+        self.rooms.append(first_room)
 
-            self.rooms.append(room)
+        for _ in range(self.num_rooms - 1):
+
+            attempts = 0
+            while attempts < 20:
+                dx, dy = random.choice([(1,0), (-1,0), (0,1), (0,-1)])
+                nx, ny = x + dx, y + dy
+
+                if (nx, ny) not in coords_taken:
+                    x, y = nx, ny
+                    coords_taken.add((x, y))
+
+                    room = Room("Normal")
+                    room.position = (x, y)
+                    self.rooms.append(room)
+                    break
+
+                attempts += 1
+
 
     def _connect_rooms(self):
         """Connect rooms in a minimally connected graph, plus some extra links."""
@@ -52,12 +72,14 @@ class DungeonGenerator:
             visited.append(uv)
 
         # add a few extra random connections
-        extra_edges = self.num_rooms // 3
+        extra_edges = min(self.num_rooms // 3, len(self.rooms) - 1)
+
         for _ in range(extra_edges):
-            r1, r2 = random.sample(self.rooms, 2)
-            if r2 not in r1.neighbors:
-                r1.neighbors.append(r2)
-                r2.neighbors.append(r1)
+            if len(self.rooms) >= 2:
+                r1, r2 = random.sample(self.rooms, 2)
+                if r2 not in r1.neighbors:
+                    r1.neighbors.append(r2)
+                    r2.neighbors.append(r1)
 
         for room in self.rooms :
             room.load_doors()
@@ -140,7 +162,7 @@ class DungeonVisualizer:
         self.dungeon = dungeon
         self.scale = 0.2
         self.offset_x = 50
-        self.offset_y = 100
+        self.offset_y = 150
         self.font = pygame.font.Font(None, 18)
 
     def draw(self, surface, current_room):
@@ -151,19 +173,48 @@ class DungeonVisualizer:
         # print("Drawing map...")
 
         # --- draw connections ---
+        PAD = 20
+        ROOM_SPACING = 40
+
+        # calculate map bounds (grid positions)
+        xs = [room.position[0] for room in self.dungeon.rooms if room.visited]
+        ys = [room.position[1] for room in self.dungeon.rooms if room.visited]
+
+        if xs and ys:
+            min_x, max_x = min(xs), max(xs)
+            min_y, max_y = min(ys), max(ys)
+
+
+            bg_x = min_x * ROOM_SPACING + self.offset_x - PAD
+            bg_y = min_y * ROOM_SPACING + self.offset_y - PAD
+            bg_w = (max_x - min_x + 1) * ROOM_SPACING + PAD * 2
+            bg_h = (max_y - min_y + 1) * ROOM_SPACING + PAD * 2
+
+            pygame.draw.rect(surface, (0, 0, 0), (bg_x, bg_y, bg_w, bg_h))
+
         for room in self.dungeon.rooms:
+            if not room.visited :
+                continue
+
             x1 = int(room.position[0] * self.scale + self.offset_x)
             y1 = int(room.position[1] * self.scale + self.offset_y)
 
             for nbr in room.neighbors:
+                if not nbr.visited : 
+                    continue
+
                 x2 = int(nbr.position[0] * self.scale + self.offset_x)
                 y2 = int(nbr.position[1] * self.scale + self.offset_y)
                 pygame.draw.line(surface, (120, 120, 120), (x1, y1), (x2, y2), 2)
 
+
         # --- draw room nodes ---
         for room in self.dungeon.rooms:
-            x = int(room.position[0] * self.scale + self.offset_x)
-            y = int(room.position[1] * self.scale + self.offset_y)
+            if not room.visited :
+                continue
+
+            x = room.position[0] * ROOM_SPACING + self.offset_x
+            y = room.position[1] * ROOM_SPACING + self.offset_y
 
             if room is current_room :
                 color = (50, 150, 255)
