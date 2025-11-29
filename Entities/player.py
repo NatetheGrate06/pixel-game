@@ -1,5 +1,6 @@
 import pygame
 from Dungeon.dungeon_generator import DungeonGenerator
+from Entities.weapon import Weapon
 
 class Player:
     
@@ -23,6 +24,8 @@ class Player:
 
         scaled_size = self.game.resolution.scale_value(32)
         self.size = pygame.Rect(0, 0, scaled_size, scaled_size)
+
+        self.active_weapon_index = 0
 
     def draw(self, surface) :
         pygame.draw.rect(surface, (50, 200, 255), self.rect)
@@ -54,10 +57,11 @@ class Player:
 
     def update(self, dt, walls=None) :
         self.handle_input()
+        self.handle_combat(dt)
 
-        self.position += self.velocity * self.speed * dt
+        #self.position += self.velocity * self.speed * dt
         self.rect.topleft = self.position
-        self.hitbox.center = self.rect.center
+        #self.hitbox.center = self.rect.center
 
         # apply knockback
         if self.knockback.length_squared() > 0:
@@ -68,8 +72,42 @@ class Player:
             self.knockback *= 0.85
 
         self.handle_movement(dt, walls)
+        #TODO game events
         self.handle_combat(dt)
 
+    def get_attack_direction(self) :
+        #TODO follow cursor
+        if self.velocity.length_squared() > 0 :
+            return self.velocity.normalize()
+        return pygame.Vector2(0, -1)
+
+    def handle_combat(self, dt) :
+        if not self.weapons :
+            return
+        
+        weapon = self.weapons[self.active_weapon_index]
+        if weapon.cooldown_timer > 0 :
+            weapon.cooldown_timer -= dt
+
+        key = pygame.key.get_pressed()
+
+        if key[pygame.K_SPACE] and weapon.cooldown_timer <= 0 :
+            direction = self.get_attack_direction()
+            weapon.attack(direction)
+            weapon.cooldown_timer = weapon.cooldown
+
+        if key[pygame.K_x] :
+            if not hasattr(self, "_switch_cooldown") :
+                self._switch_cooldown = 0
+
+            if self._switch_cooldown <= 0:
+                if len(self.weapons) > 1:
+                    self.active_weapon_index = 1 - self.active_weapon_index
+                self._switch_cooldown = 0.25
+            
+            if hasattr(self, "_switch_cooldown") and self._switch_cooldown > 0 :
+                self._switch_cooldown -= dt
+                
 
     def handle_movement(self, dt, walls):
         # horizontal movement
@@ -103,12 +141,15 @@ class Player:
 
                 self.hitbox.topleft = self.position
 
-                
-    def handle_combat(self, dt) :
-        
-
     #TODO make sure enemies don't immediately attack
     def teleport_to_room(self, room) :
         self.current_room = room
         self.position = pygame.Vector2(room.spawn_point)
         print("Teleported to", room)
+
+    def equip_weapon(self, weapon) :
+        weapon.game = self.game
+        if len(self.weapons) < 1 :
+            self.weapons.insert(0, weapon)
+        else :
+            print("Gun capacity reached.")

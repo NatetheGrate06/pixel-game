@@ -88,14 +88,18 @@ class Room:
         #     pygame.draw.rect(surface, (255, 0, 0), wall, 1)
 
     def generate_walls(self):
-        WT = 120  # wall thickness
+        WT = 120
+
+        room_w = self.width
+        room_h = self.height
 
         self.walls = [
-            pygame.Rect(0, 0, 1600, WT),
-            pygame.Rect(0, 900 - WT, 1600, WT),
-            pygame.Rect(0, 0, WT, 900),
-            pygame.Rect(1600 - WT, 0, WT, 900),
+            pygame.Rect(0, 0, room_w, WT),
+            pygame.Rect(0, room_h - WT, room_w, WT),
+            pygame.Rect(0, 0, WT, room_h), 
+            pygame.Rect(room_w - WT, 0, WT, room_h),
         ]
+
 
     def check_door_collision(self, hitbox):
         for direction, rect in self.doors.items():

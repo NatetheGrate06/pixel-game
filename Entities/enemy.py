@@ -14,6 +14,7 @@ class Enemy:
         self.speed = speed
         self.room = room
         self.type = enemy_type
+        self.alive = True
 
         self.position = pygame.Vector2(0,0)
 
@@ -113,6 +114,19 @@ class Enemy:
         else :
             pygame.draw.circle(surface, (200, 50, 50), (int(self.position.x), int(self.position.y)), 12)
 
+    def die(self) :
+        self.alive = False
+        #TODO
+
+    def take_damage(self, amount, knockback=None):
+        self.hp -= amount
+
+        if knockback is not None:
+            self.knockback = pygame.Vector2(knockback)
+
+        if self.hp <= 0:
+            self.die()
+
 class Boss(Enemy) :
 
     BOSS_STATS = {
@@ -204,7 +218,7 @@ class Brute(Enemy) :
             hp=150,          
             speed=40,   
             room=room,
-            enemy_type="Brute"
+            enemy_type="Brute",
         )
         self.position = pygame.Vector2(
             random.randint(150, room.width - 150),
@@ -294,7 +308,7 @@ class Grunt(Enemy):
             hp=40,
             speed=70,
             room=room,
-            enemy_type="Grunt"
+            enemy_type="Grunt",
         )
         self.position = pygame.Vector2(
             random.randint(100, room.width - 100),

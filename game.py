@@ -4,6 +4,7 @@ import random
 from Dungeon.room import Room, GenerateRoom
 from Dungeon.dungeon_generator import DungeonGenerator, DungeonVisualizer
 from Entities.player import Player
+from Entities.weapon import Weapon, Gun, Melee
 from Entities.enemy import Enemy, Boss, Brute, Grunt
 from UI.ui_manager import UIManager
 from UI.game_state_manager import GameStateManager
@@ -51,6 +52,9 @@ class Game:
 
         self.projectiles = []
 
+        self.player.equip_weapon(Gun(damage=10, speed=450))
+        self.player.equip_weapon(Melee(damage=25, range_=150))
+
 
     # ---------------------------------------------------------
     # MAIN GAME LOOP
@@ -59,10 +63,10 @@ class Game:
         while self.running:
 
             dt = self.clock.tick(60) / 1000  # delta time in seconds
-            events = pygame.event.get()
+            self.events = pygame.event.get()
 
             # Global events
-            for event in events:
+            for event in self.events:
                 if event.type == pygame.QUIT:
                     self.running = False
 
@@ -72,9 +76,14 @@ class Game:
                     )
                     self.resolution.apply_resolution(event.w, event.h)
 
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_F1:
+                        print("Resetting floor...")
+                        self.start_game()
+
             # Different game states
             if self.state_manager.state == "MAIN_MENU":
-                self.menu.update(events)
+                self.menu.update(self.events)
                 self.menu.draw()
                 self.cursor.draw(self.screen)
                 self.cursor.update()
@@ -124,6 +133,7 @@ class Game:
 
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.projectiles)
+            self.enemies = [e for e in self.enemies if e.alive]
 
         for p in self.projectiles[:] :
             p.update(dt, self.current_room.walls, self.enemies)
@@ -152,7 +162,7 @@ class Game:
     def draw(self):
         self.screen.fill((15, 15, 20))
 
-        # Draw room first (so walls appear behind player)
+         # Draw room first (so walls appear behind player)
         self.current_room.draw(self.screen)
 
         # Draw player
