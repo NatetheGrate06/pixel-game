@@ -25,9 +25,7 @@ class Room:
         self.top_walls = GenerateRoom.load_top_walls("Assets/Images/crypt-wall.png", scale=2)
 
     def update(self, dt):
-        for entity in self.entities:
-            if hasattr(entity, "update"):
-                entity.update(dt)
+        pass
 
     def draw_top_walls(self, surface, room_pixel_width):
         x = 0

@@ -32,7 +32,7 @@ class Player:
 
     def spawn_at(self, room) :
         self.current_room = room
-        self.position = (room.get_width() // 2, room.get_height() // 2)
+        self.position = pygame.Vector2(room.width // 2, room.height // 2)
 
     def handle_input(self) :
         keys = pygame.key.get_pressed()

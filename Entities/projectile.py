@@ -4,81 +4,100 @@ import pygame
 #TODO add trails, bullet spread, sprite projectiles
 TYPES = {
     "Ricochet" : {
-        "speed" : 8,
+        "speed" : 800,
         "damage" : 5,
         "life" : 5
     }, 
 
     "Flame" : {
-        "speed" : 6.5,
+        "speed" : 650,
         "damage" : 3,
         "life" : None
     },
 
     "Homing" : {
-        "speed" : 4,
+        "speed" : 400,
         "damage" : 20,
         "life" : 5
     },
 
     "Spread" : {
-        "speed": 10,
+        "speed": 1000,
         "damage": 5,
         "life" : None
     },
 
     "Piercing" : {
-        "speed" : 8,
+        "speed" : 800,
         "damage" : 7,
+        "life" : 5
+    },
+
+    "Basic" : {
+        "speed" : 500,
+        "damage" : 5,
         "life" : 5
     }
 }
 
-class Projectile :
-    def __init__(self, position, type, speed, direction, damage, owner=None, radius=4, color=(255,255,255)) :
-        data = TYPES[type]
+class Projectile:
+    def __init__(self, position, ptype, direction, owner=None, radius=4, color=(255,255,255)):
+        data = TYPES[ptype]
 
-        self.type = type
-        self.speed = speed
+        self.type = ptype
+        self.speed = data["speed"]
+        self.damage = data["damage"]
+        self.lifespan = data["life"]
+        self.owner = owner
+
         self.pos = pygame.Vector2(position)
         self.dir = pygame.Vector2(direction).normalize()
-        self.damage = damage
-        self.owner = owner
 
         self.radius = radius
         self.color = color
 
         self.rect = pygame.Rect(self.pos.x, self.pos.y, radius*2, radius*2)
 
-        self.lifespan = data.get("life")
+        self.age = 0.0
+        self.alive = True
 
 
-    def update(self, dt, walls, enemies) :
-        
-        #make sure projectile exists
+    def update(self, dt, walls, enemies):
+
         if not self.alive:
             return
 
+        # Movement
         self.pos += self.dir * self.speed * dt
-        self.rect.center = self.pos
+        self.rect.center = (int(self.pos.x), int(self.pos.y))
 
+        # Lifespan expiration
         self.age += dt
-        if self.age >= self.lifespan:
+        if self.lifespan is not None and self.age >= self.lifespan:
             self.alive = False
             return
-        
+
+        # Wall collision
         for wall in walls:
-            if self.rect.colliderect(wall) and self.type != TYPES["Ricochet"]:
-                self.alive = False
+            if self.rect.colliderect(wall):
+                if self.type == "Ricochet":
+                    self.dir.x *= -1 
+                    self.dir.y *= -1
+                else:
+                    self.alive = False
                 return
-            
-        for enemy in enemies: 
-            if enemy is not self.owner and self.rect.colliderect(enemy.hitbox):
+
+        # Enemy collision
+        for enemy in enemies:
+            if enemy is self.owner:
+                continue
+            if enemy.hitbox.colliderect(self.rect):
                 enemy.take_damage(self.damage)
                 self.alive = False
                 return
-            
-    def draw(self, surface) :
+
+
+    def draw(self, surface):
         if self.alive:
             pygame.draw.circle(surface, self.color, (int(self.pos.x), int(self.pos.y)), self.radius)
 

@@ -1,8 +1,6 @@
 import random
 import pygame
-
-locked_on = False
-actions = []
+from Entities.projectile import Projectile
 
 ATTACK_FUNCTIONS = {
 
@@ -10,8 +8,9 @@ ATTACK_FUNCTIONS = {
 
 class Enemy:
 
-    def __init__(self, hp, speed, room, type):
+    def __init__(self, hp, speed, room, enemy_type):
         self.hp = hp
+        self.max_hp = hp
         self.speed = speed
         self.room = room
         self.type = enemy_type
@@ -27,7 +26,12 @@ class Enemy:
         self.aggro_range = 200 #px
         self.attack_range = 100 #px
 
-    def update(self, dt, player) :
+        #roam functions
+        self.roam_direction = pygame.Vector2(0, 0)
+        self.roam_timer = 0
+        self.roam_interval = random.uniform(1.0, 2.5)
+
+    def update(self, dt, player, projectiles) :
         self.target = player
         self.action_timer -= dt
 
@@ -39,34 +43,80 @@ class Enemy:
         elif self.state == "chasing" :
             self.chase(dt, player)
 
-        elif self.state == ""
+        elif self.state == "attacking" and self.action_timer <= 0:
+            self.perform_random_action(projectiles)
+            self.action_timer = self.action_cooldown
 
-    def move(self, dt) :
-        raise NotImplementedError
-    
-    def act(self, dt, action) :
-        if (self.locked_on) :
-            action = random.choice(self.actions)
-            self.perform_action(action)
+    def update_state(self) :
+        distance = self.position.distance_to(self.target.position)
 
-    def roam(self, dt) :
-        direction = pygame.Vector2(
-            random.uniform(-1, 1),
-            random.uniform(-1, 1)
-        ).normalize()
+        if distance < self.attack_range :
+            self.state = "attacking"
 
-        self.position += direction * self.speed * dt
+        elif distance < self.aggro_range :
+            self.state = "chasing"
+
+        else :
+            self.state = "roaming"
+
+    def roam(self, dt):
+        self.roam_timer -= dt
+
+        if self.roam_timer <= 0:
+            angle = random.uniform(0, 360)
+            self.roam_direction = pygame.Vector2(1, 0).rotate(angle)
+            self.roam_interval = random.uniform(1.0, 2.5)
+            self.roam_timer = self.roam_interval
+
+        self.position += self.roam_direction * self.speed * dt
+
+        if hasattr(self, "hitbox"):
+            self.hitbox.center = (int(self.position.x), int(self.position.y))
 
     def chase(self, dt, player) :
         direction = (player.position - self.position).normalize()
         self.position += direction * self.speed * dt
     
+    def shoot(self, projectiles, speed = 250) :
+        direction = (self.target.position - self.position).normalize()
 
+        projectile = Projectile(
+            position=self.position,
+            ptype="Basic",
+            direction=direction,
+            owner=self
+        )
 
-    def perform_action(self, action_name) :
-        attack_func = ATTACK_FUNCTIONS[action_name]
-        attack_func(self)
+        projectiles.append(projectile)
 
+    def attack_shoot(enemy, projectiles) :
+        enemy.shoot(projectiles, speed=250)
+
+    ATTACK_FUNCTIONS["shoot"] = attack_shoot
+
+    def charge(self, speed, dt) :
+        direction = (self.target.position - self.position).normalize()
+
+        self.position += direction * speed * dt
+
+    ATTACK_FUNCTIONS["charge"] = charge
+
+    def perform_random_action(self, projectiles) :
+        if not hasattr(self, "attacks") or len(self.attacks) == 0:
+            return
+        
+        action_name = random.choice(self.attacks)
+
+        if action_name in ATTACK_FUNCTIONS :
+            ATTACK_FUNCTIONS[action_name](self, projectiles)
+        else :
+            print(f"[AI ERROR] Unknown action: {action_name}")
+    
+    def draw(self, surface) :
+        if (self.type == "Brute"):
+            pygame.draw.circle(surface, (200, 50, 50), (int(self.position.x), int(self.position.y)), 24)
+        else :
+            pygame.draw.circle(surface, (200, 50, 50), (int(self.position.x), int(self.position.y)), 12)
 
 class Boss(Enemy) :
 
@@ -127,25 +177,65 @@ class Boss(Enemy) :
         }
     }
 
-    def __init__(self, boss_id, has_stages, thresholds, color, **kwargs) :
+    def __init__(self, boss_id, room) :
         data = Boss.BOSS_STATS[boss_id]
 
+        super().__init__(data["hp"], data["speed"], room, "Boss")
+
         self.name = boss_id
-        self.hp = data.get("hp")
-        self.speed = data.get("speed")
-        self.attacks = data.get("attacks")
-        self.thresholds = data.get("thresholds",[])
-        self.color = data.get("color")
-        self.has_stages = data.get("has_stages", False)
+        self.attacks = data["attacks"]
+        self.thresholds = data["stage_thresholds"]
+        self.color = data["color"]
 
-        self.locked_on = True
-        self.action_timer = 0
-        self.action_cooldown = 1.0
+        self.current_stage = 0
 
-    def update(self, dt) :
-        self.action_timer -= dt
-        if self.action_timer <= 0:
-            self.act(dt)
-            self.action_timer = self.action_cooldown
+    def update(self, dt, player) :
+        hp_ratio = self.hp / self.max_hp
 
+        if (self.current_stage < len(self.thresholds) 
+            and hp_ratio <= self.thresholds[self.current_stage]) :
+            
+            self.current_stage += 1
+            print(f"{self.name} entered STAGE {self.current_stage + 1}!")
         
+        super().update(dt, player)
+
+import pygame
+import random
+
+class Brute(Enemy) :
+    def __init__(self, room):
+        super().__init__(
+            hp=150,          
+            speed=40,   
+            room=room,
+            enemy_type="Brute"
+        )
+        self.position = pygame.Vector2(
+            random.randint(100, room.width - 100),
+            random.randint(100, room.height - 100)
+        )
+        self.attacks = ["charge"]   
+        self.attack_range = 90
+
+        self.hitbox = pygame.Rect(0, 0, 32, 32)
+        self.hitbox.center = (int(self.position.x), int(self.position.y))
+
+class Grunt(Enemy):
+    def __init__(self, room):
+        super().__init__(
+            hp=40,
+            speed=70,
+            room=room,
+            enemy_type="Grunt"
+        )
+        self.position = pygame.Vector2(
+            random.randint(100, room.width - 100),
+            random.randint(100, room.height - 100)
+        )
+        self.attacks = ["shoot"]
+        self.aggro_range = 220
+        self.attack_range = 140
+
+        self.hitbox = pygame.Rect(0, 0, 24, 24)
+        self.hitbox.center = (int(self.position.x), int(self.position.y))

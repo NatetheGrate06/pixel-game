@@ -9,9 +9,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class Menu :
 
-    def __init__(self, screen, state_manager) :
+    def __init__(self, screen, state_manager, game) :
         self.screen = screen
         self.state_manager = state_manager
+        self.game = game
 
         self.font = pygame.font.Font(None, 80)
 
@@ -50,6 +51,7 @@ class Menu :
         match text :
             case "Start Game" :
                 self.state_manager.change_state("GAME")
+                self.game.start_game()
             case "Settings" :
                 self.state_manager.change_state("SETTINGS")
             case "Credits" :

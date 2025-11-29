@@ -4,6 +4,7 @@ import random
 from Dungeon.room import Room, GenerateRoom
 from Dungeon.dungeon_generator import DungeonGenerator, DungeonVisualizer
 from Entities.player import Player
+from Entities.enemy import Enemy, Boss, Brute, Grunt
 from UI.ui_manager import UIManager
 from UI.game_state_manager import GameStateManager
 from UI.main_menu import Menu
@@ -15,8 +16,8 @@ class Game:
         pygame.init()
 
         self.resolution = ResolutionManager()
-        self.screen = pygame.display.set_mode((800, 450), pygame.RESIZABLE)
-        self.resolution.apply_resolution(800, 450)
+        self.screen = pygame.display.set_mode((1024, 640), pygame.RESIZABLE)
+        self.resolution.apply_resolution(1024, 640)
 
         pygame.display.set_caption("BIOS4096")
 
@@ -40,11 +41,16 @@ class Game:
         self.minimap = DungeonVisualizer(self.dungeon)
 
         # Main menu
-        self.menu = Menu(self.screen, self.state_manager)
+        self.menu = Menu(self.screen, self.state_manager, self)
 
         self.cursor = Cursor(self)
 
         self.tiles = GenerateRoom.load_tileset("Assets/Images/mainlevbuild.png")
+
+        self.enemies = []
+
+        self.projectiles = []
+
 
     # ---------------------------------------------------------
     # MAIN GAME LOOP
@@ -79,6 +85,33 @@ class Game:
 
             pygame.display.flip()
 
+    def spawn_enemies(self, room) :
+        print("Spawning enemies.")
+
+        self.enemies = []
+
+        total_min = 0
+        total_max = 6
+        total_enemies = random.randint(total_min, total_max)
+
+        max_brutes = min(2, total_enemies)
+        num_brutes = random.randint(0, max_brutes)
+
+        num_grunts = total_enemies - num_brutes
+
+        for _ in range(num_brutes) :
+            print("Spawing brutes")
+            brute = Brute(room)
+            self.enemies.append(brute)
+            room.entities.append(brute)
+
+        for _ in range(num_grunts):
+            print("Spawning grunts")
+            grunt = Grunt(room)
+            self.enemies.append(grunt)
+            room.entities.append(grunt)
+
+
     # ---------------------------------------------------------
     # GAME UPDATE
     # ---------------------------------------------------------
@@ -87,6 +120,15 @@ class Game:
         self.dungeon.update(dt)
         self.ui.update(dt)
         self.cursor.update()
+
+        for enemy in self.enemies:
+            enemy.update(dt, self.player, self.projectiles)
+
+        for p in self.projectiles[:] :
+            p.update(dt, self.current_room.walls, self.enemies)
+
+            if not p.alive:
+                self.projectiles.remove(p)
 
     # ---------------------------------------------------------
     # RENDER
@@ -109,6 +151,12 @@ class Game:
         # Draw cursor last (always on top)
         self.cursor.draw(self.screen)
 
+        for enemy in self.enemies :
+            enemy.draw(self.screen)
+
+        for p in self.projectiles :
+            p.draw(self.screen)
+
     # ---------------------------------------------------------
     # START GAME
     # ---------------------------------------------------------
@@ -124,7 +172,10 @@ class Game:
         # initialize player position
         self.player.spawn_at(self.current_room)
 
+        self.spawn_enemies(self.current_room)
+
         self.state_manager.change_state("GAME")
+
 
 
 # -------------------------------------------------------------
@@ -134,4 +185,3 @@ if __name__ == "__main__":
     game = Game()
     game.main_loop()
     print("\nScanning tilesheet...\n")
-    GenerateRoom.detect_floor_tile_block("Assets/Images/mainlevbuild.png")
