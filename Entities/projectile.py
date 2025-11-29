@@ -92,7 +92,7 @@ class Projectile:
             if enemy is self.owner:
                 continue
             if enemy.hitbox.colliderect(self.rect):
-                enemy.take_damage(self.damage)
+                #TODO enemy.take_damage(self.damage)
                 self.alive = False
                 return
 

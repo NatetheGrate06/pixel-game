@@ -121,6 +121,8 @@ class Game:
         self.ui.update(dt)
         self.cursor.update()
 
+        #self.current_room.check_room_transition()
+
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.projectiles)
 
@@ -129,6 +131,21 @@ class Game:
 
             if not p.alive:
                 self.projectiles.remove(p)
+
+        direction = self.current_room.check_door_collision(self.player.hitbox)
+
+        if direction:
+            next_room = self.dungeon.get_neighbor(self.current_room, direction)
+            if next_room:
+                self.current_room = next_room
+                self.player.position = pygame.Vector2(next_room.width//2, next_room.height//2)
+                self.player.hitbox.center = self.player.position
+
+                # spawn enemies
+                self.enemies.clear()
+                self.spawn_enemies(next_room)
+
+                print("Moved to room", next_room.position)
 
     # ---------------------------------------------------------
     # RENDER
@@ -142,20 +159,20 @@ class Game:
         # Draw player
         self.player.draw(self.screen)
 
+        for enemy in self.enemies :
+            enemy.draw(self.screen)
+
+        for p in self.projectiles :
+            p.draw(self.screen)
+
         # Draw dungeon minimap
-        self.minimap.draw(self.screen)
+        self.minimap.draw(self.screen, self.current_room)
 
         # Draw UI
         self.ui.draw(self.screen)
 
         # Draw cursor last (always on top)
         self.cursor.draw(self.screen)
-
-        for enemy in self.enemies :
-            enemy.draw(self.screen)
-
-        for p in self.projectiles :
-            p.draw(self.screen)
 
     # ---------------------------------------------------------
     # START GAME

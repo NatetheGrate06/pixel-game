@@ -23,6 +23,19 @@ class Room:
 
         self.floor_tiles = GenerateRoom.load_floor_tiles("Assets/Images/floor_tiles.png")
         self.top_walls = GenerateRoom.load_top_walls("Assets/Images/crypt-wall.png", scale=2)
+        self.door = GenerateRoom.load_door_sprite("Assets/Images/crypt-door.png")
+
+        self.doors = {}
+
+        door_w, door_h = 160, 176
+        cx = self.width // 2
+        cy = self.height // 2
+
+        self.doors["N"] = pygame.Rect(cx - door_w//2, 0, door_w, door_h)
+        self.doors["S"] = pygame.Rect(cx - door_w//2, self.height - door_h, door_w, door_h)
+        self.doors["W"] = pygame.Rect(0, cy - door_h//2, door_w, door_h)
+        self.doors["E"] = pygame.Rect(self.width - door_w, cy - door_h//2, door_w, door_h)
+
 
     def update(self, dt):
         pass
@@ -38,8 +51,6 @@ class Room:
             x += wall.get_width()
             i += 1
 
-    #TODO draw rest of room
-
     def draw(self, surface):
         TILE_SIZE = 16
 
@@ -50,13 +61,25 @@ class Room:
                     continue
 
                 if tile_index < 0 or tile_index >= len(self.floor_tiles):
-                    continue  # safety check
+                    continue
 
                 tile = self.floor_tiles[tile_index]
                 surface.blit(tile, (x * TILE_SIZE, y * TILE_SIZE))
         
         room_pixel_width = len(self.tilemap[0]) * TILE_SIZE
         self.draw_top_walls(surface, room_pixel_width)
+
+        for direction, rect in self.doors.items():
+            sprite = self.door
+            sprite_w = sprite.get_width()
+            sprite_h = sprite.get_height()
+
+            # center sprite inside rect
+            x = rect.centerx - sprite_w // 2
+            y = rect.centery - sprite_h // 2
+
+            surface.blit(sprite, (x, y))
+
 
         # Debug walls (optional)
         # for wall in self.walls:
@@ -71,6 +94,74 @@ class Room:
             pygame.Rect(0, 0, WT, 900),
             pygame.Rect(1600 - WT, 0, WT, 900),
         ]
+
+    def check_door_collision(self, hitbox):
+        for direction, rect in self.doors.items():
+            if hitbox.colliderect(rect):
+                return direction
+        return None
+
+    """"
+    def check_room_transition(self):
+        player = self.player
+        rect = player.hitbox
+        room = self.current_room
+
+        for direction, door_rect in room.doors.items():
+            if rect.colliderect(door_rect):
+                next_room = self.dungeon.get_neighbor(room, direction)
+                if not next_room:
+                    return
+
+                print("Transition:", direction, "→", next_room.position)
+
+                self.current_room = next_room
+                self.player.position = pygame.Vector2(
+                    next_room.width // 2, next_room.height // 2
+                )
+                self.player.hitbox.center = self.player.position
+
+                self.enemies.clear()
+                self.spawn_enemies(next_room)
+                return
+     """
+    def load_doors(self) :
+        self.doors = {}
+
+        TILE_SIZE = 16
+        door_w = 160
+        door_h = 176
+
+        cx = (ROOM_WIDTH * TILE_SIZE) // 2
+        cy = (ROOM_HEIGHT * TILE_SIZE) // 2
+
+        for nbr in self.neighbors :
+            nx, ny = nbr.position
+            rx, ry = self.position
+
+            dx = nx - rx
+            dy = ny - ry
+
+            #horizontal
+            if abs(dx) > abs(dy) :
+                if dx > 0 :
+                    self.doors["E"] = pygame.Rect(
+                        ROOM_WIDTH * TILE_SIZE - door_w, cy - door_h // 2, door_w, door_h
+                    )
+                else :
+                    self.doors["W"] = pygame.Rect(
+                        0, cy - door_h // 2, door_w, door_h
+                    )
+            #vertical
+            else:
+                if dy > 0:
+                    self.doors["S"] = pygame.Rect(
+                        cx - door_w // 2, ROOM_HEIGHT * TILE_SIZE - door_h, door_w, door_h
+                    ) 
+                else :
+                    self.doors["N"] = pygame.Rect(
+                        cx - door_w // 2, 0, door_w, door_h
+                    )
 
 import pygame
 import random
@@ -161,3 +252,13 @@ class GenerateRoom:
             wall_tiles.append(part)
 
         return wall_tiles
+
+    @staticmethod
+    def load_door_sprite(path, scale=2):
+        img = pygame.image.load(path).convert_alpha()
+        w, h = img.get_width(), img.get_height()
+
+        if scale != 1:
+            img = pygame.transform.scale(img, (w * scale, h * scale))
+
+        return img

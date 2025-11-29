@@ -1,10 +1,9 @@
 # Dungeon/dungeon_generator.py
-from Dungeon.room import Room
+from Dungeon.room import Room, GenerateRoom
 import random
 import math
 
 MAX_ROOMS = 15   # how many rooms per floor
-
 
 class DungeonGenerator:
     def __init__(self, num_rooms=MAX_ROOMS):
@@ -60,6 +59,9 @@ class DungeonGenerator:
                 r1.neighbors.append(r2)
                 r2.neighbors.append(r1)
 
+        for room in self.rooms :
+            room.load_doors()
+
     def _assign_special_rooms(self):
         """Mark one start room, one boss room, and one treasure room."""
         if not self.rooms:
@@ -102,6 +104,34 @@ class DungeonGenerator:
         for room in self.rooms:
             room.update(dt)
 
+    def get_neighbor(self, room, direction):
+        if direction not in room.doors:
+            return None
+
+        rx, ry = room.position
+        best = None
+        best_dist = 999999
+
+        for nbr in room.neighbors:
+            nx, ny = nbr.position
+
+            if direction == "N" and ny < ry:
+                d = abs(ry - ny)
+            elif direction == "S" and ny > ry:
+                d = abs(ry - ny)
+            elif direction == "E" and nx > rx:
+                d = abs(nx - rx)
+            elif direction == "W" and nx < rx:
+                d = abs(nx - rx)
+            else:
+                continue
+
+            if d < best_dist:
+                best = nbr
+                best_dist = d
+
+        return best
+
 import pygame
 
 class DungeonVisualizer:
@@ -113,7 +143,7 @@ class DungeonVisualizer:
         self.offset_y = 100
         self.font = pygame.font.Font(None, 18)
 
-    def draw(self, surface):
+    def draw(self, surface, current_room):
         if not self.dungeon.rooms:
             return  # nothing to draw
 
@@ -135,7 +165,9 @@ class DungeonVisualizer:
             x = int(room.position[0] * self.scale + self.offset_x)
             y = int(room.position[1] * self.scale + self.offset_y)
 
-            if room.room_type == "Start":
+            if room is current_room :
+                color = (50, 150, 255)
+            elif room.room_type == "Start":
                 color = (0, 255, 0)
             elif room.room_type == "Boss":
                 color = (255, 0, 0)

@@ -32,6 +32,7 @@ class Enemy:
         self.roam_interval = random.uniform(1.0, 2.5)
 
     def update(self, dt, player, projectiles) :
+        self.dt = dt
         self.target = player
         self.action_timer -= dt
 
@@ -76,6 +77,7 @@ class Enemy:
     def chase(self, dt, player) :
         direction = (player.position - self.position).normalize()
         self.position += direction * self.speed * dt
+        self.hitbox.center = (int(self.position.x), int(self.position.y))
     
     def shoot(self, projectiles, speed = 250) :
         direction = (self.target.position - self.position).normalize()
@@ -89,17 +91,10 @@ class Enemy:
 
         projectiles.append(projectile)
 
-    def attack_shoot(enemy, projectiles) :
+    def attack_shoot(enemy, projectiles, DT) :
         enemy.shoot(projectiles, speed=250)
 
     ATTACK_FUNCTIONS["shoot"] = attack_shoot
-
-    def charge(self, speed, dt) :
-        direction = (self.target.position - self.position).normalize()
-
-        self.position += direction * speed * dt
-
-    ATTACK_FUNCTIONS["charge"] = charge
 
     def perform_random_action(self, projectiles) :
         if not hasattr(self, "attacks") or len(self.attacks) == 0:
@@ -108,7 +103,7 @@ class Enemy:
         action_name = random.choice(self.attacks)
 
         if action_name in ATTACK_FUNCTIONS :
-            ATTACK_FUNCTIONS[action_name](self, projectiles)
+            ATTACK_FUNCTIONS[action_name](self, projectiles, self.dt)
         else :
             print(f"[AI ERROR] Unknown action: {action_name}")
     
@@ -212,13 +207,85 @@ class Brute(Enemy) :
             enemy_type="Brute"
         )
         self.position = pygame.Vector2(
-            random.randint(100, room.width - 100),
-            random.randint(100, room.height - 100)
+            random.randint(150, room.width - 150),
+            random.randint(150, room.height - 150)
         )
         self.attacks = ["charge"]   
         self.attack_range = 90
 
         self.hitbox = pygame.Rect(0, 0, 32, 32)
+        self.hitbox.center = (int(self.position.x), int(self.position.y))
+
+        self.charge_cooldown_timer = 0.01
+        self.charging = False
+        self.windup_time = 0.035
+        self.charge_speed = 450
+        self.charge_timer = 0
+        self.charge_direction = pygame.Vector2(0, 0)
+        self.charge_cooldown = 0.05
+
+        self.attack_range = 220
+        self.aggro_range = 500
+
+    def charge(self, dt, player):
+        print("ENTERED CHARGE FUNCTION, TIMER:", self.charge_cooldown_timer)
+
+        if self.charge_cooldown_timer > 0:
+            print("Cooldown")
+            self.charge_cooldown_timer -= dt
+            return
+
+        if not self.charging and self.charge_timer <= 0:
+            print("Start windup")
+            self.charge_direction = (player.position - self.position).normalize()
+            self.charging = True
+            self.charge_timer = self.windup_time
+            return
+
+        if self.charging and self.charge_timer > 0:
+            print("Winding up")
+            self.charge_timer -= dt
+            if self.charge_timer <= 0 :
+                self.charge_timer = 0
+            return
+
+        if self.charging and self.charge_timer <= 0:
+            print("Charge")
+            movement = self.charge_direction * self.charge_speed * dt
+            self.position += movement
+
+            self.hitbox.center = (int(self.position.x), int(self.position.y))
+
+            #for wall in self.room.walls:
+             #   if self.hitbox.colliderect(wall):
+              #      self.stop_charge()
+               #     return
+
+            if self.hitbox.colliderect(player.hitbox):
+                if hasattr(player, "take_damage"):
+                    player.take_damage(20)
+                player.knockback = self.charge_direction * 400
+                self.stop_charge()
+                return
+
+            
+    def stop_charge(self) :
+        self.charging = False
+        self.charge_timer = 0
+        self.charge_cooldown_timer = self.charge_cooldown
+
+    def attack_charge(enemy, projectiles, dt) :
+        enemy.charge(dt, enemy.target)
+
+    ATTACK_FUNCTIONS["charge"] = attack_charge
+
+    def update(self, dt, player, projectiles):
+        if self.charging:
+            self.charge(dt, player)
+            return
+
+        super().update(dt, player, projectiles)
+
         self.hitbox.center = (int(self.position.x), int(self.position.y))
 
 class Grunt(Enemy):
