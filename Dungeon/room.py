@@ -1,4 +1,5 @@
 import pygame
+from Items.upgrade import Upgrade
 
 class Room:
     def __init__(self, room_type="Normal"):
@@ -38,6 +39,9 @@ class Room:
 
         self.visited = False
 
+        self.is_treasure = False
+        self.items = []
+        self.has_upgrade = False
 
     def update(self, dt):
         pass
@@ -82,22 +86,32 @@ class Room:
 
             surface.blit(sprite, (x, y))
 
+        if getattr(self, "has_upgrade", False) and self.upgrade:
+            ux = self.width // 2
+            uy = self.height // 2
 
-        # Debug walls (optional)
-        # for wall in self.walls:
-        #     pygame.draw.rect(surface, (255, 0, 0), wall, 1)
+            rect = self.upgrade.icon.get_rect(center=(ux, uy))
+            self.upgrade.rect = rect
+
+            surface.blit(self.upgrade.icon, rect.topleft)
+
+
+        # Debug walls
+        for wall in self.walls:
+            pygame.draw.rect(surface, (255, 0, 0), wall, 1)
 
     def generate_walls(self):
-        WT = 120
+        NWT = 120   # top wall thickness
+        SWT = 40    # bottom wall thickness
 
         room_w = self.width
         room_h = self.height
 
         self.walls = [
-            pygame.Rect(0, 0, room_w, WT),
-            pygame.Rect(0, room_h - WT, room_w, WT),
-            pygame.Rect(0, 0, WT, room_h), 
-            pygame.Rect(room_w - WT, 0, WT, room_h),
+            pygame.Rect(0, 0, room_w, NWT), #top
+            pygame.Rect(0, room_h - SWT, room_w, SWT), #bottom
+            pygame.Rect(0, 0, NWT, room_h), #left
+            pygame.Rect(room_w - NWT, 0, NWT, room_h), #right
         ]
 
 
@@ -152,11 +166,10 @@ TILE_SIZE = 8
 ROOM_WIDTH = 100
 ROOM_HEIGHT = 58
 
-# For now, just use all 36 floor tiles
 FLOORS = list(range(151))
-WALLS = [0, 1, 2, 3, 4, 5]   # we'll just re-use some floor tiles as walls for now
+WALLS = [0, 1, 2, 3, 4, 5]  
 CORNERS = [0, 1, 2, 3]
-DOORS = [0]                  # placeholder
+DOORS = [0] 
 
 class GenerateRoom:
 

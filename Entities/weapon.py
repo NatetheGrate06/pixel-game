@@ -15,6 +15,8 @@ class Gun(Weapon):
         self.damage = damage
         self.projectile_speed = speed
 
+        self.bullet_color = (255, 255, 255)
+
     def attack(self, direction):
         from Entities.projectile import Projectile
 
@@ -25,7 +27,8 @@ class Gun(Weapon):
             position=start_pos,
             ptype="Basic",   
             direction=direction,     
-            owner=player
+            owner=player,
+            color=self.bullet_color
         )
 
         player.game.projectiles.append(proj)

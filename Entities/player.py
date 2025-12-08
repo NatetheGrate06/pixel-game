@@ -12,6 +12,7 @@ class Player:
         self.upgrades = []
         self.consumables = []
         self.current_room = None
+        self.alive = True
 
         self.position = pygame.Vector2(100,100)
         self.velocity = pygame.Vector2(0,0)
@@ -27,11 +28,13 @@ class Player:
 
         self.active_weapon_index = 0
 
+        self.sprite = pygame.image.load("Assets/Images/mc-bios.png").convert_alpha()
+        self.sprite = pygame.transform.scale(self.sprite, (64, 64))
+
+        self.sprite_list = [self.sprite]
+
     def draw(self, surface) :
-        pygame.draw.rect(surface, (50, 200, 255), self.rect)
-        #TODO load sprite
-        #self.sprite = pygame.image.load("Assets/player.png").convert_alpha()
-        #self.sprite = pygame.transform.scale(self.sprite, (32, 32))
+        surface.blit(self.sprite, self.hitbox.topleft)
 
     def spawn_at(self, room) :
         self.current_room = room
@@ -147,9 +150,22 @@ class Player:
         self.position = pygame.Vector2(room.spawn_point)
         print("Teleported to", room)
 
+    def die(self) :
+        self.alive = False
+
+    def take_damage(self, damage, knockback) :
+        self.hp -= damage
+
+        if knockback is not None:
+            self.knockback = pygame.Vector2(knockback)
+
+        if self.hp <= 0:
+            self.die()
+
     def equip_weapon(self, weapon) :
         weapon.game = self.game
         if len(self.weapons) < 1 :
             self.weapons.insert(0, weapon)
         else :
             print("Gun capacity reached.")
+            return

@@ -159,6 +159,7 @@ class Consumables :
         self.position = pygame.Vector2(100, 100)
         self.font = pygame.font.Font(None, 28)
 
+    #TODO
     def draw(self, surface) :
         for i in range(len(Consumable.consumables)) :
             pygame.draw.rect(surface, (255, 255, 255), (self.position[0] * i + 40, self.position[1], self.width / len(Consumable.consumables), self.height))

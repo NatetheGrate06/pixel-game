@@ -2,9 +2,17 @@ import random
 import pygame
 from Entities.projectile import Projectile
 
-ATTACK_FUNCTIONS = {
+ATTACK_FUNCTIONS = {}
 
-}
+def attack_shoot(enemy, projectiles, dt) :
+    enemy.shoot(projectiles, speed=250)
+
+ATTACK_FUNCTIONS["shoot"] = attack_shoot
+
+def attack_charge(enemy, projectiles, dt) :
+    enemy.charge(dt, enemy.target)
+
+ATTACK_FUNCTIONS["charge"] = attack_charge
 
 class Enemy:
 
@@ -92,10 +100,6 @@ class Enemy:
 
         projectiles.append(projectile)
 
-    def attack_shoot(enemy, projectiles, DT) :
-        enemy.shoot(projectiles, speed=250)
-
-    ATTACK_FUNCTIONS["shoot"] = attack_shoot
 
     def perform_random_action(self, projectiles) :
         if not hasattr(self, "attacks") or len(self.attacks) == 0:
@@ -116,7 +120,9 @@ class Enemy:
 
     def die(self) :
         self.alive = False
-        #TODO
+        
+        if hasattr(self, "on_death_callback") and self.on_death_callback :
+            self.on_death_callback(self)
 
     def take_damage(self, amount, knockback=None):
         self.hp -= amount
@@ -277,7 +283,7 @@ class Brute(Enemy) :
 
             if self.hitbox.colliderect(player.hitbox):
                 if hasattr(player, "take_damage"):
-                    player.take_damage(20)
+                    player.take_damage(20, player.knockback)
                 player.knockback = self.charge_direction * 400
                 self.stop_charge()
                 return
@@ -287,11 +293,6 @@ class Brute(Enemy) :
         self.charging = False
         self.charge_timer = 0
         self.charge_cooldown_timer = self.charge_cooldown
-
-    def attack_charge(enemy, projectiles, dt) :
-        enemy.charge(dt, enemy.target)
-
-    ATTACK_FUNCTIONS["charge"] = attack_charge
 
     def update(self, dt, player, projectiles):
         if self.charging:

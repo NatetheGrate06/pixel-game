@@ -1,5 +1,6 @@
 # Dungeon/dungeon_generator.py
 from Dungeon.room import Room, GenerateRoom
+from Items.upgrade import Upgrade, UPGRADES
 import random
 import math
 
@@ -9,6 +10,7 @@ class DungeonGenerator:
     def __init__(self, num_rooms=MAX_ROOMS):
         self.num_rooms = num_rooms
         self.rooms: list[Room] = []
+        self.has_upgrade = False
 
     # -------- PUBLIC --------
     def generate_new_floor(self):
@@ -21,38 +23,66 @@ class DungeonGenerator:
         start_room = self.get_start_room()
         start_room.visited = True
 
-    # -------- INTERNAL STEPS --------
+        trasure_room = random.choice(self.rooms[1:])
+        trasure_room.is_treasure = True
+        trasure_room.has_upgrade = True
+
+        trasure_room.upgrade = random.choice(UPGRADES)
+
     def _generate_rooms(self):
-        GRID_SPACING = 1
-
-        coords_taken = set()
-        x, y = 0, 0
-        coords_taken.add((x, y))
-
+        """Generate rooms in a clean grid layout."""
         self.rooms = []
 
-        first_room = Room("Normal")
-        first_room.position = (x, y)
-        self.rooms.append(first_room)
+        # Create room objects
+        for _ in range(self.num_rooms):
+            room = Room("Normal")
+            room.neighbors = []
+            self.rooms.append(room)
 
-        for _ in range(self.num_rooms - 1):
+        # Assign grid positions
+        used_positions = set()
+        queue = []
 
-            attempts = 0
-            while attempts < 20:
-                dx, dy = random.choice([(1,0), (-1,0), (0,1), (0,-1)])
-                nx, ny = x + dx, y + dy
+        # Start room placed at (0,0)
+        start_room = self.rooms[0]
+        start_room.grid_pos = (0, 0)
+        used_positions.add((0, 0))
+        queue.append(start_room)
 
-                if (nx, ny) not in coords_taken:
-                    x, y = nx, ny
-                    coords_taken.add((x, y))
+        
 
-                    room = Room("Normal")
-                    room.position = (x, y)
-                    self.rooms.append(room)
-                    break
+        idx = 1
 
-                attempts += 1
+        # BFS placement for all rooms
+        while idx < len(self.rooms):
+            parent = queue.pop(0)
+            px, py = parent.grid_pos
 
+            # Directions: N, E, S, W
+            directions = [(0,-1),(1,0),(0,1),(-1,0)]
+            random.shuffle(directions)
+
+            for dx, dy in directions:
+                if idx >= len(self.rooms): break
+
+                new_pos = (px + dx, py + dy)
+                if new_pos in used_positions:
+                    continue
+
+                # Assign room
+                room = self.rooms[idx]
+                room.grid_pos = new_pos
+                used_positions.add(new_pos)
+                queue.append(room)
+
+                idx += 1
+
+        GRID_SIZE = 80  # spacing between room nodes on minimap
+
+        for room in self.rooms:
+            gx, gy = room.grid_pos
+            # Offset so (0,0) lands centered
+            room.position = (gx * GRID_SIZE, gy * GRID_SIZE)
 
     def _connect_rooms(self):
         """Connect rooms in a minimally connected graph, plus some extra links."""
@@ -71,17 +101,20 @@ class DungeonGenerator:
             closest.neighbors.append(uv)
             visited.append(uv)
 
-        # add a few extra random connections
-        extra_edges = min(self.num_rooms // 3, len(self.rooms) - 1)
+        for room in self.rooms:
+            rx, ry = room.grid_pos
 
-        for _ in range(extra_edges):
-            if len(self.rooms) >= 2:
-                r1, r2 = random.sample(self.rooms, 2)
-                if r2 not in r1.neighbors:
-                    r1.neighbors.append(r2)
-                    r2.neighbors.append(r1)
+            # Look for neighbors in the 4 cardinal directions
+            for other in self.rooms:
+                ox, oy = other.grid_pos
 
-        for room in self.rooms :
+                if abs(rx - ox) + abs(ry - oy) == 1:
+                    if other not in room.neighbors:
+                        room.neighbors.append(other)
+                        other.neighbors.append(room)
+
+        # Now load doors
+        for room in self.rooms:
             room.load_doors()
 
     def _assign_special_rooms(self):
@@ -104,6 +137,8 @@ class DungeonGenerator:
         if leftovers:
             treasure_room = random.choice(leftovers)
             treasure_room.room_type = "Treasure"
+            treasure_room.upgrade = random.choice(UPGRADES)
+            treasure_room.has_upgrade = True
 
     # -------- HELPERS --------
     def _distance(self, r1, r2):
@@ -156,67 +191,123 @@ class DungeonGenerator:
 
 import pygame
 
+import pygame
+from collections import deque
+
 class DungeonVisualizer:
     """Simple minimap / debug view of the dungeon graph."""
     def __init__(self, dungeon):
         self.dungeon = dungeon
-        self.scale = 0.2
-        self.offset_x = 50
-        self.offset_y = 150
+        self.room_layout = {}     # room -> (gx, gy) in grid space
+        self.grid_spacing = 40    # pixels between nodes on the map
+        self.offset_x = 0         # we'll center using screen size
+        self.offset_y = 0
         self.font = pygame.font.Font(None, 18)
+
+        self._compute_layout()
+
+    def _compute_layout(self):
+        """Assign each room a grid coordinate so the start is at (0,0)."""
+        self.room_layout.clear()
+        rooms = self.dungeon.rooms
+        if not rooms:
+            return
+
+        start = self.dungeon.get_start_room()
+        if start is None:
+            start = rooms[0]
+
+        # BFS from start room
+        q = deque()
+        q.append(start)
+        self.room_layout[start] = (0, 0)
+
+        visited = {start}
+        used_coords = {(0, 0)}
+
+        directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]  # N, E, S, W
+
+        while q:
+            room = q.popleft()
+            rx, ry = self.room_layout[room]
+
+            # For each neighbor, assign a free grid slot around this room
+            for nbr in room.neighbors:
+                if nbr in visited:
+                    continue
+
+                for dx, dy in directions:
+                    gx = rx + dx
+                    gy = ry + dy
+                    if (gx, gy) not in used_coords:
+                        self.room_layout[nbr] = (gx, gy)
+                        used_coords.add((gx, gy))
+                        visited.add(nbr)
+                        q.append(nbr)
+                        break
+
+    def _room_screen_pos(self, surface, room):
+        """Convert grid coords → screen coords INSIDE minimap box."""
+
+        if room not in self.room_layout:
+            return (0, 0)
+
+        gx, gy = self.room_layout[room]
+
+        # minimap box position
+        map_w = 400
+        map_h = 300
+        map_x = surface.get_width() - map_w - 20
+        map_y = 20
+
+        # center inside minimap box
+        center_x = map_x + map_w // 2
+        center_y = map_y + map_h // 2
+
+        x = center_x + gx * self.grid_spacing
+        y = center_y + gy * self.grid_spacing
+
+        return x, y
 
     def draw(self, surface, current_room):
         if not self.dungeon.rooms:
-            return  # nothing to draw
+            return
 
-        # print only once per frame is normal, but we can comment this out later
-        # print("Drawing map...")
+        # ---- background rect (optional, nice framing) ----
+        map_w = 400
+        map_h = 300
+        map_x = surface.get_width() - map_w - 20
+        map_y = 0
+        minimap_rect = pygame.Rect(map_x, map_y, map_w, map_h)
 
-        # --- draw connections ---
-        PAD = 20
-        ROOM_SPACING = 40
+        pygame.draw.rect(surface, (0, 0, 0), minimap_rect)
+        pygame.draw.rect(surface, (80, 80, 80), minimap_rect, 2)
 
-        # calculate map bounds (grid positions)
-        xs = [room.position[0] for room in self.dungeon.rooms if room.visited]
-        ys = [room.position[1] for room in self.dungeon.rooms if room.visited]
+        # Shift everything so the map is drawn inside this rect
+        # but we already center based on surface size, so you can
+        # tweak to anchor it inside the box if you want later.
 
-        if xs and ys:
-            min_x, max_x = min(xs), max(xs)
-            min_y, max_y = min(ys), max(ys)
-
-
-            bg_x = min_x * ROOM_SPACING + self.offset_x - PAD
-            bg_y = min_y * ROOM_SPACING + self.offset_y - PAD
-            bg_w = (max_x - min_x + 1) * ROOM_SPACING + PAD * 2
-            bg_h = (max_y - min_y + 1) * ROOM_SPACING + PAD * 2
-
-            pygame.draw.rect(surface, (0, 0, 0), (bg_x, bg_y, bg_w, bg_h))
-
+        # ---- draw connections ----
         for room in self.dungeon.rooms:
-            if not room.visited :
+            if not room.visited:
                 continue
 
-            x1 = int(room.position[0] * self.scale + self.offset_x)
-            y1 = int(room.position[1] * self.scale + self.offset_y)
+            x1, y1 = self._room_screen_pos(surface, room)
 
             for nbr in room.neighbors:
-                if not nbr.visited : 
+                if not nbr.visited:
                     continue
-
-                x2 = int(nbr.position[0] * self.scale + self.offset_x)
-                y2 = int(nbr.position[1] * self.scale + self.offset_y)
+                x2, y2 = self._room_screen_pos(surface, nbr)
                 pygame.draw.line(surface, (120, 120, 120), (x1, y1), (x2, y2), 2)
 
-
-        # --- draw room nodes ---
+        # ---- draw room nodes ----
         for room in self.dungeon.rooms:
-            if not room.visited :
+            if not room.visited:
                 continue
 
-            x = room.position[0] * ROOM_SPACING + self.offset_x
-            y = room.position[1] * ROOM_SPACING + self.offset_y
+            x, y = self._room_screen_pos(surface, room)
 
-            if room is current_room :
+            if room is current_room:
                 color = (50, 150, 255)
             elif room.room_type == "Start":
                 color = (0, 255, 0)
@@ -229,7 +320,6 @@ class DungeonVisualizer:
 
             pygame.draw.circle(surface, color, (x, y), 7)
 
-            # tiny label with first letter of type
             label_char = room.room_type[0] if room.room_type else "N"
             label = self.font.render(label_char, True, (0, 0, 0))
             label_rect = label.get_rect(center=(x, y))

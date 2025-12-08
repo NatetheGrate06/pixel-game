@@ -62,7 +62,7 @@ class Projectile:
         self.alive = True
 
 
-    def update(self, dt, walls, enemies):
+    def update(self, dt, walls, enemies, player=None):
 
         if not self.alive:
             return
@@ -93,6 +93,12 @@ class Projectile:
                 continue
             if enemy.hitbox.colliderect(self.rect):
                 enemy.take_damage(self.damage)
+                self.alive = False
+                return
+            
+        if player and self.owner != player:
+            if player.hitbox.colliderect(self.rect) :
+                player.take_damage(self.damage, knockback=1)
                 self.alive = False
                 return
 

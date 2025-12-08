@@ -11,16 +11,20 @@ from UI.game_state_manager import GameStateManager
 from UI.main_menu import Menu
 from Entities.projectile import Projectile, Cursor
 from UI.Settings.resolution_manager import ResolutionManager
+from Items.inventory import Inventory
+from Items.upgrade import Upgrade
 
 class Game:
     def __init__(self):
         pygame.init()
 
         self.resolution = ResolutionManager()
-        self.screen = pygame.display.set_mode((1024, 640), pygame.RESIZABLE)
-        self.resolution.apply_resolution(1024, 640)
+        self.screen = pygame.display.set_mode((1600, 900), pygame.RESIZABLE)
+        self.resolution.apply_resolution(1600, 900)
 
         pygame.display.set_caption("BIOS4096")
+
+        Upgrade.load_icons()
 
         self.clock = pygame.time.Clock()
         self.running = True
@@ -35,6 +39,7 @@ class Game:
         self.dungeon.generate_new_floor() 
         
         self.current_room = self.dungeon.get_start_room()
+        #self.current_room = Room("Treasure")
 
         self.ui = UIManager(self.player, self)
 
@@ -55,7 +60,9 @@ class Game:
         self.player.equip_weapon(Gun(damage=10, speed=450))
         self.player.equip_weapon(Melee(damage=25, range_=150))
 
-
+        self.inventory = Inventory()
+        self.player.inventory = self.inventory
+    
     # ---------------------------------------------------------
     # MAIN GAME LOOP
     # ---------------------------------------------------------
@@ -94,6 +101,13 @@ class Game:
 
             pygame.display.flip()
 
+    def brute_killed(self, brute) :
+        heal_amount = 10
+
+        self.player.hp += heal_amount
+        if self.player.hp > 100:
+            self.player.hp = 100
+
     def spawn_enemies(self, room) :
         print("Spawning enemies.")
 
@@ -111,6 +125,7 @@ class Game:
         for _ in range(num_brutes) :
             print("Spawing brutes")
             brute = Brute(room)
+            brute.on_death_callback = self.brute_killed
             self.enemies.append(brute)
             room.entities.append(brute)
 
@@ -131,12 +146,15 @@ class Game:
         self.ui.update(dt)
         self.cursor.update()
 
+        if self.player.alive == False :
+            self.state_manager.change_state("MAIN_MENU")
+
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.projectiles)
             self.enemies = [e for e in self.enemies if e.alive]
 
         for p in self.projectiles[:] :
-            p.update(dt, self.current_room.walls, self.enemies)
+            p.update(dt, self.current_room.walls, self.enemies, self.player)
 
             if not p.alive:
                 self.projectiles.remove(p)
@@ -147,14 +165,39 @@ class Game:
             next_room = self.dungeon.get_neighbor(self.current_room, direction)
             if next_room:
                 self.current_room = next_room
-                self.player.position = pygame.Vector2(next_room.width//2, next_room.height//2)
-                self.player.hitbox.center = self.player.position
+                if direction == "N":  # player came from north room → entering from south door
+                    self.player.position = pygame.Vector2(next_room.width // 2, next_room.height - 200)
 
+                elif direction == "S":  # came from south → spawn near top
+                    self.player.position = pygame.Vector2(next_room.width // 2, 200)
+
+                elif direction == "E":  # came from east → spawn near left
+                    self.player.position = pygame.Vector2(200, next_room.height // 2)
+
+                elif direction == "W":  # came from west → spawn near right
+                    self.player.position = pygame.Vector2(next_room.width - 200, next_room.height // 2)
+
+                # Update hitbox
+                self.player.hitbox.center = self.player.position
                 # spawn enemies
                 self.enemies.clear()
                 self.spawn_enemies(next_room)
 
                 print("Moved to room", next_room.position)
+
+        room = self.current_room
+
+        if getattr(room, "has_upgrade", False) :
+            upgrade = room.upgrade
+
+            if upgrade.rect.colliderect(self.player.hitbox) :
+
+                upgrade.apply(self.player)
+                self.inventory.add_upgrade(upgrade)
+
+                print(f"Picked up: {upgrade.name}")
+
+                room.has_upgrade = False
 
     # ---------------------------------------------------------
     # RENDER
@@ -180,6 +223,8 @@ class Game:
         # Draw UI
         self.ui.draw(self.screen)
 
+        self.inventory.draw(self.screen)
+
         # Draw cursor last (always on top)
         self.cursor.draw(self.screen)
 
@@ -202,7 +247,17 @@ class Game:
 
         self.state_manager.change_state("GAME")
 
+    # ---------------------------------------------------------
+    # Open Settings
+    # ---------------------------------------------------------
+    def open_settings(self):
+        pass
 
+    # ---------------------------------------------------------
+    # Open Credits
+    # ---------------------------------------------------------
+    def open_credits(self):
+        pass
 
 # -------------------------------------------------------------
 # ENTRY POINT
