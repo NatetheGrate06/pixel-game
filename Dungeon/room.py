@@ -1,11 +1,12 @@
 import pygame
-from Items.upgrade import Upgrade
+from Items.upgrade import Upgrade, UPGRADES
 
 class Room:
     def __init__(self, room_type="Normal"):
         self.room_type = room_type
         self.is_start = False
         self.is_boss = False
+        self.is_treasure = False
         self.position = (0, 0)
         self.neighbors = []
         self.entities = []
@@ -39,9 +40,15 @@ class Room:
 
         self.visited = False
 
-        self.is_treasure = False
         self.items = []
+        self.upgrade = None
         self.has_upgrade = False
+
+    def spawn_upgrade(self) :
+        Upgrade.load_icons()
+
+        self.upgrade = random.choice(UPGRADES)
+        self.has_upgrade = True
 
     def update(self, dt):
         pass
@@ -95,10 +102,9 @@ class Room:
 
             surface.blit(self.upgrade.icon, rect.topleft)
 
-
         # Debug walls
-        for wall in self.walls:
-            pygame.draw.rect(surface, (255, 0, 0), wall, 1)
+        #for wall in self.walls:
+            #pygame.draw.rect(surface, (255, 0, 0), wall, 1)
 
     def generate_walls(self):
         NWT = 120   # top wall thickness

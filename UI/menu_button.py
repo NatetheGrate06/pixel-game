@@ -1,22 +1,35 @@
 import pygame
+import os
 
-class MenuButton :
-    def __init__(self, text, center_pos) :
-        self.text = text
-        self.font = pygame.font.Font(None, 50)
+class MenuButton:
+    def __init__(self, image_path, center_pos, action_name):
+        """
+        image_path  – path to the button texture
+        center_pos  – (x, y) where the button is centered
+        action_name – "Start Game", "Settings", etc.
+        """
+        self.action = action_name
 
-        self.text_surface = self.font.render(text, True, (255, 255, 255))
-        self.rect = self.text_surface.get_rect(center=center_pos)
+        # Load sprite
+        self.image = pygame.image.load(image_path).convert_alpha()
 
-        self.default_color = (255, 255, 255)
-        self.hover_color = (200, 200, 200)
+        # Optionally scale it
+        scale = 2.5
+        w, h = self.image.get_size()
+        self.image = pygame.transform.scale(self.image, (int(w * scale), int(h * scale)))
 
-    def is_hovered(self) :
+        self.rect = self.image.get_rect(center=center_pos)
+
+        # Hover effect
+        self.hover_image = self.image.copy()
+        self.hover_image.fill((50, 50, 50, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+    def is_hovered(self):
         mouse_pos = pygame.mouse.get_pos()
         return self.rect.collidepoint(mouse_pos)
-    
-    def draw(self, surface) :
-        color = self.hover_color if self.is_hovered() else self.default_color
 
-        self.text_surface = self.font.render(self.text, True, color)
-        surface.blit(self.text_surface, self.rect)
+    def draw(self, surface):
+        if self.is_hovered():
+            surface.blit(self.hover_image, self.rect)
+        else:
+            surface.blit(self.image, self.rect)

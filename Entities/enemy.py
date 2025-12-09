@@ -40,6 +40,34 @@ class Enemy:
         self.roam_timer = 0
         self.roam_interval = random.uniform(1.0, 2.5)
 
+    def move_with_collision(self, dx, dy, dt, speed=None):
+        if speed is None:
+            speed = self.speed
+
+        # horizontal
+        self.position.x += dx * speed * dt
+        self.hitbox.center = (int(self.position.x), int(self.position.y))
+
+        for wall in self.room.walls:
+            if self.hitbox.colliderect(wall):
+                if dx > 0:
+                    self.position.x = wall.left - self.hitbox.width // 2
+                else:
+                    self.position.x = wall.right + self.hitbox.width // 2
+                self.hitbox.center = (int(self.position.x), int(self.position.y))
+
+        # vertical
+        self.position.y += dy * speed * dt
+        self.hitbox.center = (int(self.position.x), int(self.position.y))
+
+        for wall in self.room.walls:
+            if self.hitbox.colliderect(wall):
+                if dy > 0:
+                    self.position.y = wall.top - self.hitbox.height // 2
+                else:
+                    self.position.y = wall.bottom + self.hitbox.height // 2
+                self.hitbox.center = (int(self.position.x), int(self.position.y))
+
     def update(self, dt, player, projectiles) :
         self.dt = dt
         self.target = player
@@ -78,15 +106,16 @@ class Enemy:
             self.roam_interval = random.uniform(1.0, 2.5)
             self.roam_timer = self.roam_interval
 
-        self.position += self.roam_direction * self.speed * dt
+        dx, dy = self.roam_direction.x, self.roam_direction.y
+        self.move_with_collision(dx, dy, dt)
 
-        if hasattr(self, "hitbox"):
-            self.hitbox.center = (int(self.position.x), int(self.position.y))
+    def chase(self, dt, player):
+        direction = (player.position - self.position)
 
-    def chase(self, dt, player) :
-        direction = (player.position - self.position).normalize()
-        self.position += direction * self.speed * dt
-        self.hitbox.center = (int(self.position.x), int(self.position.y))
+        if direction.length_squared() > 0:
+            direction = direction.normalize()
+
+        self.move_with_collision(direction.x, direction.y, dt)
     
     def shoot(self, projectiles, speed = 250) :
         direction = (self.target.position - self.position).normalize()
@@ -112,11 +141,12 @@ class Enemy:
         else :
             print(f"[AI ERROR] Unknown action: {action_name}")
     
-    def draw(self, surface) :
-        if (self.type == "Brute"):
-            pygame.draw.circle(surface, (200, 50, 50), (int(self.position.x), int(self.position.y)), 24)
-        else :
-            pygame.draw.circle(surface, (200, 50, 50), (int(self.position.x), int(self.position.y)), 12)
+    def draw(self, surface):
+        if hasattr(self, "sprite"):
+            surface.blit(self.sprite, self.hitbox.topleft)
+        else:
+            # fallback debug drawing
+            pygame.draw.circle(surface, (200, 50, 50), (int(self.position.x), int(self.position.y)), 16)
 
     def die(self) :
         self.alive = False
@@ -133,62 +163,41 @@ class Enemy:
         if self.hp <= 0:
             self.die()
 
+BOSSES = ["Ember Lich", "Mech-ssassin", "Bone General"]
+
+import random
+
 class Boss(Enemy) :
 
     BOSS_STATS = {
-        "Sprinter" : {
-            "hp": 300,
-            "speed": 9,
-            "attacks": ["dash", "triple_dash", "clone_dash"],
-            "has_stages": True,
-            "stage_thresholds":[0.7, 0.4],
-            "color": (255, 0, 0)
-        },
-
         "Ember Lich" : {
             "hp": 400,
-            "speed": 6.5,
+            "speed": 20,
             "attacks": ["fireball", "flame_shockwave", "meteor_drop"],
             "has_stages": True,
             "stage_thresholds":[0.5, 0.3],
-            "color": (255, 165, 0)
+            "color": (255, 165, 0),
+            "sprite" : "Assets/Images/Lich Boss.png"
         },
 
-        "Serpent" : {
-            "hp": 450,
-            "speed": 7.3,
-            "attacks": ["burrow", "venom", "tail_swipe"],
+        "Mech-ssassin" : {
+            "hp": 400,
+            "speed": 30,
+            "attacks": ["phase", "dagger_fall", "arm_launch"],
             "has_stages": True,
-            #TODO implement thresholds; pain in the butt
-            "stage_thresholds":[0.8],
-            "color": (0, 128, 128)
+            "stage_thresholds":[0.5, 0.3],
+            "color": (255, 165, 0),
+            "sprite" : "Assets/Images/Mech-ssassin.png"
         },
 
-        "Gear Titan" : {
-            "hp": 450,
-            "speed": 5,
-            "attacks": ["arm_slam", "rocket_volley", "laser_sweep"],
+        "Bone General" : {
+            "hp": 400,
+            "speed": 15,
+            "attacks": ["summon", "bone_rush", "flame_puddle"],
             "has_stages": True,
-            #TODO implement thresholds; pain in the butt
-            "stage_thresholds":[0.8],
-            "color": (128, 128, 128)
-        },
-
-        "Plague" : {
-
-        },
-
-        "Executioner" : {
-
-        },
-
-        "Priestess" : {
-
-        },
-
-        #Might not keep this one
-        "Herald" : {
-
+            "stage_thresholds":[0.5, 0.3],
+            "color": (255, 165, 0),
+            "sprite" : "Assets/Images/Bone General.png"
         }
     }
 
@@ -204,7 +213,13 @@ class Boss(Enemy) :
 
         self.current_stage = 0
 
-    def update(self, dt, player) :
+        sprite_path = data["sprite"]
+        self.sprite = pygame.image.load(sprite_path).convert_alpha()
+        self.sprite = pygame.transform.scale(self.sprite, (512, 380))
+
+        self.rect = self.sprite.get_rect(center=(room.width//2, room.height//2))
+
+    def update(self, dt, player, projectiles) :
         hp_ratio = self.hp / self.max_hp
 
         if (self.current_stage < len(self.thresholds) 
@@ -213,10 +228,36 @@ class Boss(Enemy) :
             self.current_stage += 1
             print(f"{self.name} entered STAGE {self.current_stage + 1}!")
         
-        super().update(dt, player)
+        super().update(dt, player, projectiles)
+
+    @staticmethod
+    def spawn_boss(room) :
+        print("Spawning Boss...")
+
+        valid_bosses = [
+            name for name, data in Boss.BOSS_STATS.items()
+            if "hp" in data
+        ]
+        boss_id = random.choice(valid_bosses)
+
+        boss = Boss(boss_id, room)
+
+        # Center boss
+        boss.position = pygame.Vector2(room.width // 2, room.height // 2)
+        boss.hitbox = pygame.Rect(0, 0, 96, 96)
+        boss.hitbox.center = boss.position
+
+        room.boss = boss
+        return boss
+
+    def draw(self, surface):
+        self.rect.center = (int(self.position.x), int(self.position.y))
+        surface.blit(self.sprite, self.rect.topleft)
 
 import pygame
 import random
+from Assets.texture_manager import TextureManager
+from Assets import sound_manager
 
 class Brute(Enemy) :
     def __init__(self, room):
@@ -226,15 +267,25 @@ class Brute(Enemy) :
             room=room,
             enemy_type="Brute",
         )
+
         self.position = pygame.Vector2(
             random.randint(150, room.width - 150),
             random.randint(150, room.height - 150)
         )
+
+        self.sprite = TextureManager.load(
+            "Assets/Images/enemy_brute.png",
+            scale=(128, 128)
+        )
+
+        self.width = self.sprite.get_width()
+        self.height = self.sprite.get_height()
+
         self.attacks = ["charge"]   
         self.attack_range = 90
 
-        self.hitbox = pygame.Rect(0, 0, 32, 32)
-        self.hitbox.center = (int(self.position.x), int(self.position.y))
+        self.hitbox = pygame.Rect(0, 0, self.width, self.height)
+        self.hitbox.center = self.position
 
         self.charge_cooldown_timer = 0.01
         self.charging = False
@@ -247,48 +298,48 @@ class Brute(Enemy) :
         self.attack_range = 220
         self.aggro_range = 500
 
-    def charge(self, dt, player):
-        print("ENTERED CHARGE FUNCTION, TIMER:", self.charge_cooldown_timer)
+    def die(self) :
+        super().die()
+        sound_manager.brute_die.play()
 
-        if self.charge_cooldown_timer > 0:
-            print("Cooldown")
+    def charge(self, dt, player):
+
+        if not self.charging and self.charge_cooldown_timer > 0:
             self.charge_cooldown_timer -= dt
             return
 
+        # Begin windup phase
         if not self.charging and self.charge_timer <= 0:
-            print("Start windup")
             self.charge_direction = (player.position - self.position).normalize()
             self.charging = True
             self.charge_timer = self.windup_time
+            self.action_timer = self.action_cooldown  # prevent re-attacking
             return
 
+        # Windup counting down
         if self.charging and self.charge_timer > 0:
-            print("Winding up")
             self.charge_timer -= dt
-            if self.charge_timer <= 0 :
-                self.charge_timer = 0
             return
 
+        # Charge movement
         if self.charging and self.charge_timer <= 0:
-            print("Charge")
-            movement = self.charge_direction * self.charge_speed * dt
-            self.position += movement
 
-            self.hitbox.center = (int(self.position.x), int(self.position.y))
+            dx, dy = self.charge_direction.x, self.charge_direction.y
+            self.move_with_collision(dx, dy, dt, speed=self.charge_speed)
 
-            #for wall in self.room.walls:
-             #   if self.hitbox.colliderect(wall):
-              #      self.stop_charge()
-               #     return
+            # Stop if hit wall
+            for wall in self.room.walls:
+                if self.hitbox.colliderect(wall):
+                    self.stop_charge()
+                    return
 
+            # Hit player
             if self.hitbox.colliderect(player.hitbox):
-                if hasattr(player, "take_damage"):
-                    player.take_damage(20, player.knockback)
+                player.take_damage(20, player.knockback)
                 player.knockback = self.charge_direction * 400
                 self.stop_charge()
                 return
 
-            
     def stop_charge(self) :
         self.charging = False
         self.charge_timer = 0
@@ -315,9 +366,19 @@ class Grunt(Enemy):
             random.randint(100, room.width - 100),
             random.randint(100, room.height - 100)
         )
+
+        self.sprite = TextureManager.load(
+            "Assets/Images/enemy_grunt.png", 
+            (64, 64)
+        )
+
         self.attacks = ["shoot"]
         self.aggro_range = 220
         self.attack_range = 140
 
         self.hitbox = pygame.Rect(0, 0, 24, 24)
         self.hitbox.center = (int(self.position.x), int(self.position.y))
+    
+    def die(self) :
+        super().die()
+        sound_manager.grunt_die.play()

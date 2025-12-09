@@ -28,15 +28,36 @@ class Menu :
             self.background,
             (screen.get_width(), screen.get_height())
         )
+        button_dir = os.path.join(base, "..", "Assets", "Images")
+
         self.buttons = [
-            MenuButton("Start Game", (screen.get_width() // 2, 300)),
-            MenuButton("Settings", (screen.get_width() // 2, 380)),
-            MenuButton("Credits", (screen.get_width() // 2, 460)),
-            MenuButton("Quit", (screen.get_width() // 2, 540)),
+            MenuButton(os.path.join(button_dir, "play.png"), 
+                    (screen.get_width() // 2, 400), 
+                    "Start Game"),
+
+            MenuButton(os.path.join(button_dir, "settings.png"),
+                    (screen.get_width() // 2, 520),
+                    "Settings"),
+
+            MenuButton(os.path.join(button_dir, "credits.png"),
+                    (screen.get_width() // 2, 640),
+                    "Credits"),
+
+            MenuButton(os.path.join(button_dir, "quit.png"),
+                    (screen.get_width() // 2, 760),
+                    "Quit"),
         ]
 
-        self.title_text = self.font.render("BIOS4096", True, (255, 255, 255))
-        self.title_pos = (screen.get_width() // 2 - self.title_text.get_width() // 2, 100)
+        title_path = os.path.join(base, "..", "Assets", "Images", "title.png")
+        self.title_image = pygame.image.load(title_path).convert_alpha()
+
+        # resize or leave as-is
+        tw, th = self.title_image.get_size()
+        self.title_image = pygame.transform.scale(self.title_image, (tw * 5, th * 5))
+
+        self.title_pos = self.title_image.get_rect(center=(screen.get_width() // 2, 150))
+
+        self.title_pos = (screen.get_width() // 2 - self.title_image.get_width() // 2, 0)
 
 
     def update(self, events) :
@@ -44,7 +65,7 @@ class Menu :
             if event.type == pygame.MOUSEBUTTONDOWN:
                 for button in self.buttons:
                     if button.is_hovered() :
-                        self.button_action(button.text)
+                        self.button_action(button.action)
 
     def button_action(self, text) :
 
@@ -63,7 +84,7 @@ class Menu :
     def draw(self) :
         self.screen.blit(self.background, (0,0))
 
-        self.screen.blit(self.title_text, self.title_pos)
+        self.screen.blit(self.title_image, self.title_pos)
 
         for button in self.buttons:
             button.draw(self.screen)

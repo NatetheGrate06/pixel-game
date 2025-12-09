@@ -1,6 +1,7 @@
 import pygame
 from Dungeon.dungeon_generator import DungeonGenerator
-from Entities.weapon import Weapon
+from Entities.weapon import Weapon, Melee
+from Assets import sound_manager
 
 class Player:
     
@@ -62,9 +63,8 @@ class Player:
         self.handle_input()
         self.handle_combat(dt)
 
-        #self.position += self.velocity * self.speed * dt
         self.rect.topleft = self.position
-        #self.hitbox.center = self.rect.center
+        self.hitbox.center = self.rect.center
 
         # apply knockback
         if self.knockback.length_squared() > 0:
@@ -75,14 +75,20 @@ class Player:
             self.knockback *= 0.85
 
         self.handle_movement(dt, walls)
-        #TODO game events
         self.handle_combat(dt)
 
     def get_attack_direction(self) :
-        #TODO follow cursor
-        if self.velocity.length_squared() > 0 :
-            return self.velocity.normalize()
-        return pygame.Vector2(0, -1)
+        # Cursor world position is just screen position for now 
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+        player_center = pygame.Vector2(self.hitbox.center)
+
+        direction = pygame.Vector2(mouse_x, mouse_y) - player_center
+
+        if direction.length_squared() == 0:
+            return pygame.Vector2(0, -1)
+
+        return direction.normalize()
 
     def handle_combat(self, dt) :
         if not self.weapons :
@@ -97,6 +103,12 @@ class Player:
         if key[pygame.K_SPACE] and weapon.cooldown_timer <= 0 :
             direction = self.get_attack_direction()
             weapon.attack(direction)
+
+            if isinstance(weapon, Melee):
+                sound_manager.slash.play()
+            else:
+                sound_manager.shoot.play()
+
             weapon.cooldown_timer = weapon.cooldown
 
         if key[pygame.K_x] :
@@ -113,7 +125,6 @@ class Player:
                 
 
     def handle_movement(self, dt, walls):
-        # horizontal movement
         # horizontal movement
         self.position.x += self.velocity.x * self.speed * dt
         self.hitbox.topleft = self.position
@@ -144,7 +155,6 @@ class Player:
 
                 self.hitbox.topleft = self.position
 
-    #TODO make sure enemies don't immediately attack
     def teleport_to_room(self, room) :
         self.current_room = room
         self.position = pygame.Vector2(room.spawn_point)
@@ -152,6 +162,7 @@ class Player:
 
     def die(self) :
         self.alive = False
+        sound_manager.player_die.play()
 
     def take_damage(self, damage, knockback) :
         self.hp -= damage
@@ -164,8 +175,8 @@ class Player:
 
     def equip_weapon(self, weapon) :
         weapon.game = self.game
-        if len(self.weapons) < 1 :
-            self.weapons.insert(0, weapon)
+        if len(self.weapons) < 2 :
+            self.weapons.append(weapon)
         else :
             print("Gun capacity reached.")
             return

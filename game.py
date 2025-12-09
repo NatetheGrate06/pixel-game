@@ -9,14 +9,19 @@ from Entities.enemy import Enemy, Boss, Brute, Grunt
 from UI.ui_manager import UIManager
 from UI.game_state_manager import GameStateManager
 from UI.main_menu import Menu
+from UI.Settings.settings_menu import SettingsMenu
+from UI.credits import CreditsMenu
 from Entities.projectile import Projectile, Cursor
 from UI.Settings.resolution_manager import ResolutionManager
 from Items.inventory import Inventory
 from Items.upgrade import Upgrade
+from Assets import sound_manager
+from Assets.music_manager import MusicManager
 
 class Game:
     def __init__(self):
         pygame.init()
+        pygame.mixer.init()
 
         self.resolution = ResolutionManager()
         self.screen = pygame.display.set_mode((1600, 900), pygame.RESIZABLE)
@@ -26,17 +31,39 @@ class Game:
 
         Upgrade.load_icons()
 
+        sound_manager.load_sounds()
+
+        self.music = MusicManager()
+
+        #pygame.mixer.music.load("Assets/Music/main_theme.mp3")
+        #pygame.mixer.music.play(-1)
+        #pygame.mixer.music.set_volume(1.0)
+
+        #self.sfx_volume = 1.0
+
         self.clock = pygame.time.Clock()
         self.running = True
         pygame.mouse.set_visible(False)
 
+        self.music.play("menu")
+
         # State Manager
         self.state_manager = GameStateManager()
+
+        # Settings Menu
+        self.settings_menu = SettingsMenu(self.screen, self.state_manager, self)
+
+        # Credits Menu
+        self.credits_menu = CreditsMenu(self)
 
         # Game systems
         self.player = Player(self)
         self.dungeon = DungeonGenerator()
         self.dungeon.generate_new_floor() 
+
+        # instantiate for rooms
+        for room in self.dungeon.rooms:
+            room.game = self
         
         self.current_room = self.dungeon.get_start_room()
         #self.current_room = Room("Treasure")
@@ -88,6 +115,13 @@ class Game:
                         print("Resetting floor...")
                         self.start_game()
 
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        if self.state_manager.state == "GAME":
+                            self.reset_menu()
+                        else:
+                            self.state_manager.change_state("MAIN_MENU")
+                            
             # Different game states
             if self.state_manager.state == "MAIN_MENU":
                 self.menu.update(self.events)
@@ -98,6 +132,15 @@ class Game:
             elif self.state_manager.state == "GAME":
                 self.update(dt)
                 self.draw()
+
+            elif self.state_manager.state == "SETTINGS":
+                self.settings_menu.update(self.events)
+                self.settings_menu.draw()
+                self.cursor.draw(self.screen)
+                self.cursor.update()
+            elif self.state_manager.state == "CREDITS":
+                self.credits_menu.update(dt, self.events)
+                self.credits_menu.draw(self.screen)
 
             pygame.display.flip()
 
@@ -135,6 +178,10 @@ class Game:
             self.enemies.append(grunt)
             room.entities.append(grunt)
 
+    def reset_menu(self) :
+        self.enemies.clear()
+        self.projectiles.clear()
+        self.state_manager.change_state("MAIN_MENU")
 
     # ---------------------------------------------------------
     # GAME UPDATE
@@ -147,7 +194,7 @@ class Game:
         self.cursor.update()
 
         if self.player.alive == False :
-            self.state_manager.change_state("MAIN_MENU")
+            self.reset_menu()
 
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.projectiles)
@@ -165,23 +212,26 @@ class Game:
             next_room = self.dungeon.get_neighbor(self.current_room, direction)
             if next_room:
                 self.current_room = next_room
-                if direction == "N":  # player came from north room → entering from south door
+                if direction == "N":  # player came from north room - entering from south door
                     self.player.position = pygame.Vector2(next_room.width // 2, next_room.height - 200)
 
-                elif direction == "S":  # came from south → spawn near top
+                elif direction == "S":  # came from south - spawn near top
                     self.player.position = pygame.Vector2(next_room.width // 2, 200)
 
-                elif direction == "E":  # came from east → spawn near left
+                elif direction == "E":  # came from east - spawn near left
                     self.player.position = pygame.Vector2(200, next_room.height // 2)
 
-                elif direction == "W":  # came from west → spawn near right
+                elif direction == "W":  # came from west - spawn near right
                     self.player.position = pygame.Vector2(next_room.width - 200, next_room.height // 2)
 
-                # Update hitbox
                 self.player.hitbox.center = self.player.position
-                # spawn enemies
+
                 self.enemies.clear()
-                self.spawn_enemies(next_room)
+                if next_room.room_type == "Boss":
+                    boss = Boss.spawn_boss(next_room)
+                    self.enemies.append(boss)
+                else:
+                    self.spawn_enemies(next_room)
 
                 print("Moved to room", next_room.position)
 
@@ -194,6 +244,8 @@ class Game:
 
                 upgrade.apply(self.player)
                 self.inventory.add_upgrade(upgrade)
+
+                sound_manager.item_pickup.play()
 
                 print(f"Picked up: {upgrade.name}")
 
@@ -240,12 +292,33 @@ class Game:
         # set starting room
         self.current_room = self.dungeon.get_start_room()
 
-        # initialize player position
+        # initialize player
         self.player.spawn_at(self.current_room)
+        self.player.alive = True
+        self.player.hp = 100
+        self.projectiles.clear()
+        self.enemies.clear()
+
+        for w in self.player.weapons :
+            w.cooldown_timer = 0
+        
+        self.player.active_weapon_index = 0
 
         self.spawn_enemies(self.current_room)
 
         self.state_manager.change_state("GAME")
+
+        self.music.play("level")
+
+        # reset rooms
+        for room in self.dungeon.rooms:
+            room.visited = False
+            room.entities.clear()
+
+            if room.room_type != "Treasure":
+                room.has_upgrade = False
+                room.upgrade = None
+
 
     # ---------------------------------------------------------
     # Open Settings

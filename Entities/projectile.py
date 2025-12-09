@@ -120,4 +120,8 @@ class Cursor:
         self.position = pygame.mouse.get_pos()
 
     def draw(self, surface) :
-        pygame.draw.circle(surface, self.color, self.position, self.radius, 2) 
+        scaled_pos = (
+            int(self.position[0] / self.game.resolution.scale_x),
+            int(self.position[1] / self.game.resolution.scale_y)
+        )
+        pygame.draw.circle(surface, self.color, scaled_pos, 6)
